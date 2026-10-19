@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: cfa-postgres
+    environment:
+      POSTGRES_DB: cfa
+      POSTGRES_USER: cfa
+      POSTGRES_PASSWORD: cfa_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - cfa-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cfa -d cfa"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: cfa-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: cfa
+      RABBITMQ_DEFAULT_PASS: cfa_dev_password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - cfa-rabbit-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  cfa-pg-data:
+  cfa-rabbit-data:

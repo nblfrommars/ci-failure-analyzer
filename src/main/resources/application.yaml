@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: ci-failure-analyzer
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cfa
+    username: cfa
+    password: cfa_dev_password
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: cfa
+    password: cfa_dev_password
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
