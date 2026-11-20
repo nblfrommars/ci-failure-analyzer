@@ -232,7 +232,8 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [x] Đã tạo `OrchestratorCoordinator`: map task → agent, gọi `OpenClawAgentClient`, chuyển state và ghi audit event; unit test adapter/state machine vẫn pass sau thay đổi.
 - [x] Đã nối trigger `workflow_run` thành công vào Orchestrator qua `WorkflowRunOrchestratorTrigger`, giới hạn repo demo và bật bằng `CFA_ORCHESTRATOR_ENABLED=false` mặc định; chưa bật chạy thật trên webhook.
 - [x] Đã thêm `WorkflowRunOrchestratorTriggerTest`: xác minh chỉ run thành công của repo demo với SHA 40 ký tự mới tạo task deploy; repo khác, conclusion khác hoặc SHA sai đều bị bỏ qua.
-- [ ] Sau khi quota reset: reload MCP, chạy lại `testgen-mcp__run_tests` bằng session mới, rồi ghi kết quả pass/fail và model thực tế.
+- [x] Đã reload MCP và chạy lại Test Agent cloud bằng session mới với model `openrouter-cloud/particle-ai/particle-1:free`; model nhận request và discovery được MCP, nhưng `dispatch_action` bị kẹt khiến tool execution timeout sau khoảng 298 giây, chưa có kết quả test.
+- [ ] Điều tra tiếp lỗi `dispatch_action`/bridge khi Test Agent gọi `testgen-mcp__run_tests`; không retry ngay để tránh lặp request và tiêu quota.
 - [ ] Chỉ sau khi Test Agent pass ổn định mới chốt `open_pr`, Triage playbook và Orchestrator.
 - [x] Đã sửa môi trường test context: đặt timezone JVM về UTC và dùng `pgvector/pgvector:pg16` cho Testcontainers; `CiFailureAnalyzerApplicationTests` pass, Flyway áp dụng đủ V1–V3 và Spring context khởi động thành công.
 - [x] Đã chạy lại nhóm test orchestration sau thay đổi môi trường: tổng cộng 10 test pass, không failure/error.
