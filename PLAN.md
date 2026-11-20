@@ -243,7 +243,7 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [x] Commit và push cập nhật kế hoạch: `4b877d5`.
 - [x] Reload MCP và thử lại Test Agent cloud bằng session mới; model thực tế là `particle-ai/particle-1:free`.
 - [x] Xác nhận model cloud nhận request và discovery được `testgen-mcp`, nhưng `dispatch_action` bị kẹt khi gọi `run_tests`, dẫn tới timeout khoảng 298 giây.
-- [ ] Ngày mai: debug `dispatch_action`/MCP bridge, kiểm tra tool call trực tiếp và chỉ retry Test Agent sau khi xác định nguyên nhân.
+- [ ] Bước tiếp theo: debug `dispatch_action`/MCP bridge, kiểm tra tool call trực tiếp và chỉ retry Test Agent sau khi xác định nguyên nhân.
 - [ ] Sau khi Test Agent chạy ổn định: hoàn thiện luồng `open_pr`, bật thử Orchestrator trên webhook demo và cập nhật số liệu đánh giá.
 - [ ] Chỉ sau khi Test Agent pass ổn định mới chốt `open_pr`, Triage playbook và Orchestrator.
 - [x] Đã sửa môi trường test context: đặt timezone JVM về UTC và dùng `pgvector/pgvector:pg16` cho Testcontainers; `CiFailureAnalyzerApplicationTests` pass, Flyway áp dụng đủ V1–V3 và Spring context khởi động thành công.
