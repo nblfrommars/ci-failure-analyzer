@@ -231,5 +231,10 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [x] Đã thêm Flyway migration `V3__orchestrator_audit.sql` và `OrchestratorAuditStore` để lưu orchestrator run, state hiện tại và lịch sử transition/tool-agent event; Maven compile thành công.
 - [x] Đã tạo `OrchestratorCoordinator`: map task → agent, gọi `OpenClawAgentClient`, chuyển state và ghi audit event; unit test adapter/state machine vẫn pass sau thay đổi.
 - [x] Đã nối trigger `workflow_run` thành công vào Orchestrator qua `WorkflowRunOrchestratorTrigger`, giới hạn repo demo và bật bằng `CFA_ORCHESTRATOR_ENABLED=false` mặc định; chưa bật chạy thật trên webhook.
+- [x] Đã thêm `WorkflowRunOrchestratorTriggerTest`: xác minh chỉ run thành công của repo demo với SHA 40 ký tự mới tạo task deploy; repo khác, conclusion khác hoặc SHA sai đều bị bỏ qua.
 - [ ] Sau khi quota reset: reload MCP, chạy lại `testgen-mcp__run_tests` bằng session mới, rồi ghi kết quả pass/fail và model thực tế.
 - [ ] Chỉ sau khi Test Agent pass ổn định mới chốt `open_pr`, Triage playbook và Orchestrator.
+- [x] Đã sửa môi trường test context: đặt timezone JVM về UTC và dùng `pgvector/pgvector:pg16` cho Testcontainers; `CiFailureAnalyzerApplicationTests` pass, Flyway áp dụng đủ V1–V3 và Spring context khởi động thành công.
+- [x] Đã chạy lại nhóm test orchestration sau thay đổi môi trường: tổng cộng 10 test pass, không failure/error.
+- [x] Đã rà soát và commit các thay đổi code/test/plan trong commit `c69f491`; các file patch/cấu hình cá nhân vẫn để ngoài commit.
+- [ ] Bước kế tiếp: push commit `c69f491` lên remote `origin/main` khi em xác nhận.
