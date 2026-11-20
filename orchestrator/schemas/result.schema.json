@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ci-failure-analyzer.local/schemas/orchestrator-result.schema.json",
+  "title": "Orchestrator agent result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_id", "status", "output", "summary"],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "failed", "needs_human"]
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ci-failure-analyzer.local/schemas/triage-output.schema.json",
+  "title": "Triage verdict",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdict", "reason", "evidence", "run_id", "repo"],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["APP_BUG", "STALE_TEST", "needs_human"]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "run_id": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "repo": {
+      "type": "string",
+      "pattern": "^[^/\\s]+/[^/\\s]+$"
+    }
+  }
+}

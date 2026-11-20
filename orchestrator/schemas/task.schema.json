@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ci-failure-analyzer.local/schemas/orchestrator-task.schema.json",
+  "title": "Orchestrator task",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_id", "task", "input"],
+  "properties": {
+    "task_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "task": {
+      "type": "string",
+      "enum": ["deploy", "test", "triage"]
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

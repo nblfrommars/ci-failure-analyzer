@@ -2,6 +2,9 @@ spring:
   application:
     name: ci-failure-analyzer
 
+  config:
+    import: optional:file:.env[.properties]
+
   datasource:
     url: jdbc:postgresql://localhost:5432/cfa
     username: cfa
@@ -29,3 +32,27 @@ management:
   endpoint:
     health:
       show-details: always
+
+github:
+  webhook-secret: ${GITHUB_WEBHOOK_SECRET:}
+  app-id: ${GITHUB_APP_ID:}
+  private-key-path: ${GITHUB_APP_PRIVATE_KEY_PATH:}
+
+cfa:
+  llm:
+    profile: ${LLM_PROFILE:local}
+    base-url: ${LLM_BASE_URL:http://localhost:11434}
+    api-key: ${LLM_API_KEY:}
+    model: ${LLM_MODEL:qwen3:4b}
+    timeout-seconds: ${LLM_TIMEOUT_SECONDS:300}
+
+  eval:
+    enabled: ${CFA_EVAL_ENABLED:false}
+    data-dir: ${CFA_EVAL_DATA_DIR:}
+    db-enabled: ${CFA_EVAL_DB_ENABLED:false}
+    report-dir: ${CFA_EVAL_REPORT_DIR:eval-reports}
+
+  orchestrator:
+    openclaw:
+      executable: ${OPENCLAW_EXECUTABLE:openclaw.cmd}
+      timeout-seconds: ${OPENCLAW_TIMEOUT_SECONDS:300}

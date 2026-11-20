@@ -1,0 +1,25 @@
+{
+  "task": {
+    "task_id": "run-142",
+    "task": "triage",
+    "input": {
+      "repo_full_name": "nblfrommars/ci-sandbox",
+      "run_id": 42751785320,
+      "run_attempt": 1
+    }
+  },
+  "result": {
+    "task_id": "run-142",
+    "status": "needs_human",
+    "output": {
+      "verdict": "needs_human",
+      "reason": "Lỗi nằm ở cấu hình workflow CI.",
+      "evidence": [
+        "cache-dependency-path trỏ tới app/package-lock.jsonn"
+      ],
+      "run_id": 42751785320,
+      "repo": "nblfrommars/ci-sandbox"
+    },
+    "summary": "CI thất bại do cấu hình cache; cần người sửa workflow."
+  }
+}
