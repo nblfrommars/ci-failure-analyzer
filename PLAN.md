@@ -236,5 +236,6 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [ ] Chỉ sau khi Test Agent pass ổn định mới chốt `open_pr`, Triage playbook và Orchestrator.
 - [x] Đã sửa môi trường test context: đặt timezone JVM về UTC và dùng `pgvector/pgvector:pg16` cho Testcontainers; `CiFailureAnalyzerApplicationTests` pass, Flyway áp dụng đủ V1–V3 và Spring context khởi động thành công.
 - [x] Đã chạy lại nhóm test orchestration sau thay đổi môi trường: tổng cộng 10 test pass, không failure/error.
-- [x] Đã rà soát và commit các thay đổi code/test/plan trong commit `c69f491`; các file patch/cấu hình cá nhân vẫn để ngoài commit.
-- [ ] Bước kế tiếp: push commit `c69f491` lên remote `origin/main` khi em xác nhận.
+- [x] Đã rà soát và commit các thay đổi code/test/plan trong commit `ca2f4de`; các file patch/cấu hình cá nhân vẫn để ngoài commit.
+- [x] Đã push commit `ca2f4de` lên remote `origin/main`.
+- [ ] Bước kế tiếp: sau khi quota reset, reload MCP và chạy lại Test Agent cloud với `testgen-mcp__run_tests`; ghi nhận pass/fail và model thực tế.
