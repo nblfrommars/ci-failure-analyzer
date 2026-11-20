@@ -5,11 +5,13 @@ import com.nbl.cfa.classifier.FailureClassifier;
 import com.nbl.cfa.github.GitHubApiClient;
 import com.nbl.cfa.messaging.RabbitConfig;
 import com.nbl.cfa.persistence.PipelineStore;
+import com.nbl.cfa.orchestrator.WorkflowRunOrchestratorTrigger;
 import com.nbl.cfa.webhook.WorkflowRunMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -26,13 +28,16 @@ public class WorkflowRunWorker {
     private final PipelineStore store;
     private final GitHubApiClient github;
     private final FailureClassifier classifier;
+    private final ObjectProvider<WorkflowRunOrchestratorTrigger> orchestratorTrigger;
 
     public WorkflowRunWorker(JsonMapper jsonMapper, PipelineStore store,
-                             GitHubApiClient github, FailureClassifier classifier) {
+                             GitHubApiClient github, FailureClassifier classifier,
+                             ObjectProvider<WorkflowRunOrchestratorTrigger> orchestratorTrigger) {
         this.jsonMapper = jsonMapper;
         this.store = store;
         this.github = github;
         this.classifier = classifier;
+        this.orchestratorTrigger = orchestratorTrigger;
     }
 
     @RabbitListener(queues = RabbitConfig.WORKFLOW_RUN_QUEUE)
@@ -56,6 +61,12 @@ public class WorkflowRunWorker {
             log.info("Lưu run {} ({}), conclusion={}, không cần lấy log",
                     m.runId(), m.repoFullName(), m.conclusion());
             return;
+        }
+        if (runSucceeded) {
+            WorkflowRunOrchestratorTrigger trigger = orchestratorTrigger.getIfAvailable();
+            if (trigger != null) {
+                trigger.handleSuccessfulRun(m);
+            }
         }
         if (m.installationId() == null) {
             throw new IllegalStateException("Message thiếu installationId, không gọi được GitHub API");

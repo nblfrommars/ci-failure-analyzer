@@ -53,6 +53,8 @@ cfa:
     report-dir: ${CFA_EVAL_REPORT_DIR:eval-reports}
 
   orchestrator:
+    enabled: ${CFA_ORCHESTRATOR_ENABLED:false}
+    demo-repo: ${CFA_ORCHESTRATOR_DEMO_REPO:nblfrommars/ci-sandbox}
     openclaw:
       executable: ${OPENCLAW_EXECUTABLE:openclaw.cmd}
       timeout-seconds: ${OPENCLAW_TIMEOUT_SECONDS:300}

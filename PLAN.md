@@ -226,5 +226,10 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [x] Đã tạo JSON Schema độc lập ngôn ngữ cho Orchestrator tại `orchestrator/schemas/`: task, result, Triage output và examples; đã kiểm tra parse JSON thành công.
 - [x] Đã chốt D6: Orchestrator mở rộng Spring Boot, không dùng Spring AI ở lớp điều phối; MCP server tiếp tục viết bằng Python.
 - [x] Đã tạo adapter `OpenClawAgentClient` và `AgentTask`/`AgentInvocationResult`: gọi CLI OpenClaw theo agent ID, timeout cấu hình hóa, parse JSON và không nhận shell command tùy ý; Maven compile thành công với JDK 21.
+- [x] Đã thêm và chạy `OpenClawAgentClientTest`: 4/4 test pass cho JSON output, agent ID không hợp lệ, CLI failure và timeout.
+- [x] Đã dựng state machine Orchestrator thuần Java tại `com.nbl.cfa.orchestrator`, bao phủ nhánh pass, `APP_BUG` rollback, `STALE_TEST` heal và guard invalid transition; unit test state machine pass.
+- [x] Đã thêm Flyway migration `V3__orchestrator_audit.sql` và `OrchestratorAuditStore` để lưu orchestrator run, state hiện tại và lịch sử transition/tool-agent event; Maven compile thành công.
+- [x] Đã tạo `OrchestratorCoordinator`: map task → agent, gọi `OpenClawAgentClient`, chuyển state và ghi audit event; unit test adapter/state machine vẫn pass sau thay đổi.
+- [x] Đã nối trigger `workflow_run` thành công vào Orchestrator qua `WorkflowRunOrchestratorTrigger`, giới hạn repo demo và bật bằng `CFA_ORCHESTRATOR_ENABLED=false` mặc định; chưa bật chạy thật trên webhook.
 - [ ] Sau khi quota reset: reload MCP, chạy lại `testgen-mcp__run_tests` bằng session mới, rồi ghi kết quả pass/fail và model thực tế.
 - [ ] Chỉ sau khi Test Agent pass ổn định mới chốt `open_pr`, Triage playbook và Orchestrator.

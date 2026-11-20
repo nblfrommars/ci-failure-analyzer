@@ -1,0 +1,18 @@
+package com.nbl.cfa.orchestrator;
+
+public enum OrchestratorEvent {
+    START_DEPLOY,
+    DEPLOY_SUCCEEDED,
+    DEPLOY_FAILED,
+    TEST_PASSED,
+    TEST_FAILED,
+    TRIAGE_APP_BUG,
+    TRIAGE_STALE_TEST,
+    TRIAGE_NEEDS_HUMAN,
+    ROLLBACK_SUCCEEDED,
+    ROLLBACK_FAILED,
+    HEAL_SUCCEEDED,
+    HEAL_FAILED,
+    PROMOTION_APPROVED,
+    PROMOTION_REJECTED
+}
