@@ -1,6 +1,6 @@
 # Kế hoạch hoàn thiện CI Failure Analyzer
 
-> Cập nhật: 2026-11-19
+> Cập nhật: 2026-11-21
 > Nguồn yêu cầu: `AGENTS.md` và đối chiếu code hiện tại của repo này.
 
 ## 1. Mục tiêu cuối cùng
@@ -22,7 +22,7 @@
 - [x] Đã có Docker Compose cho PostgreSQL/pgvector và RabbitMQ.
 - [x] Ghi nhận yêu cầu mới trong `AGENTS.md`: chế độ phát triển tạm thời là `cloud` qua OpenRouter; đây là trạng thái/định hướng được khai báo, chưa coi là đã kiểm thử trên máy.
 - [x] Kiểm thử cloud inference: OpenRouter đã trả lời thành công với model `cohere/north-mini-code:free` qua OpenClaw TUI.
-- [ ] Chưa có trong repo: 3 playbook, Orchestrator, staging compose, CI workflow hoàn chỉnh, audit log và Telegram. Đã tạo Dockerfile/workflow build image nhưng chưa xác nhận bằng GitHub Actions.
+- [ ] Còn thiếu playbook Deploy/Test hoàn chỉnh, webhook/pipeline ghép end-to-end, Telegram và demo 3 nhánh; Orchestrator, staging compose, CI build/push và audit log đã có.
 - [x] U2 hoàn tất: gọi agent `main` qua Gateway thành công với provider `openrouter-cloud`, model `cohere/north-mini-code:free`; trả `OK`, thời gian khoảng 9.9 giây, chi phí lượt thử `0`.
 - [x] Kiểm tra local inference: `qwen3:4b` đã trả lời được, nhưng không tuân thủ yêu cầu trả lời chính xác và suy diễn nhầm OpenClaw thành OpenCL; cần đánh giá instruction-following/tool calling trước khi dựng agent.
 - [x] Kiểm tra bản cài OpenClaw: ban đầu chưa có trong `PATH`, sau đó đã cài và xác nhận `OpenClaw 2026.11.5`.
@@ -36,7 +36,7 @@
 - [x] Xác định và cài OpenClaw CLI `2026.11.5` qua npm.
 - [ ] Nâng Node lên phiên bản được OpenClaw hỗ trợ (`24.16+`); OpenClaw hiện đã cài nhưng môi trường vẫn cần được chuẩn hóa.
 - [x] Xác minh U2 hoàn chỉnh: `openclaw agent --agent main` gọi thành công qua Gateway.
-- [x] Xác minh cú pháp quản lý MCP của OpenClaw `2026.11.5`: có `mcp add`, `list`, `probe`, `reload`; hiện chưa có MCP server nào được cấu hình.
+- [x] Xác minh cú pháp quản lý MCP của OpenClaw `2026.11.5`: có `mcp add`, `list`, `probe`, `reload`; các MCP server cần thiết đã được cấu hình và probe.
 - [x] Tạo, đăng ký và probe MCP smoke test `smoke-test`; OpenClaw đã nhìn thấy 1 tool (`ping`).
 - [x] Tool calling smoke test đạt: agent gọi `smoke-test__ping` và nhận `pong`; `bridgeCalls: 1`. `dispatch_action` xuất hiện như bridge nội bộ của OpenClaw, còn `exec` đã không được dùng.
 - [x] Tạo skeleton `readonly-mcp` với `get_build_status` và `get_logs`, đọc PostgreSQL ở chế độ chỉ đọc; đã kiểm tra cú pháp Python.
@@ -50,18 +50,18 @@
 
 ### P1 — Chuẩn bị app mục tiêu và staging
 
-- [ ] Chốt `ci-sandbox` là app mục tiêu và chốt staging chạy trên máy local.
+- [x] Chốt `ci-sandbox` là app mục tiêu và staging chạy trên máy local.
 - [x] Bổ sung/chốt `Dockerfile` cho app mục tiêu; `ci-sandbox/app/Dockerfile` đã build thành công trên GitHub Actions.
 - [x] Tạo `deploy/staging.yml`, health check và cơ chế truyền image tag qua `CI_SANDBOX_IMAGE`; đã pull image SHA `eacecc2de832c71e546f94ee2af0050448590427` và start container staging thành công.
 - [ ] Thêm các `data-testid` cần thiết cho luồng demo.
 - [ ] Viết workflow CI hoàn chỉnh: `ci-sandbox/.github/workflows/build-image.yml` đã build/push GHCR theo SHA thành công; còn thiếu gọi webhook.
-- [ ] Cấu hình staging chỉ `docker pull` image từ GHCR, không build lại local.
+- [x] Cấu hình staging chỉ `docker pull` image từ GHCR, không build lại local.
 
 ### P1 — Xây 3 MCP server với quyền tối thiểu
 
-- [ ] `readonly-mcp`: `get_build_status`, `get_logs`; tái sử dụng GitHub client/auth hiện có khi phù hợp.
+- [x] `readonly-mcp`: đã tạo/probe `get_build_status`, `get_logs`; đang dùng cho Triage Agent.
 - [x] `deploy-mcp`: đã đăng ký/probe thành công với 3 tool; agent Deploy đã kiểm thử `health_check`, `deploy` và `rollback` thành công. Rollback từ image `78b631c65228985bda1d21bc96d457e2110fc7b5` về `eacecc2de832c71e546f94ee2af0050448590427`.
-- [ ] `testgen-mcp`: đã tạo, đăng ký và probe thành công 3 tool; `write_test` giới hạn `app/e2e/tests/ai-generated/*.ts`, `run_tests` cố định Playwright; `open_pr` hiện dừng an toàn với `needs_human` cho đến khi chốt GitHub auth/branch policy.
+- [x] `testgen-mcp`: đã tạo, đăng ký và probe thành công 3 tool; `run_tests` cố định Playwright; `open_pr` vẫn dừng an toàn với `needs_human` cho đến khi chốt GitHub auth/branch policy.
 - [ ] Giới hạn `write_test` vào `e2e/tests/ai-generated/*.ts`; resolve path và từ chối path ngoài allowlist.
 - [ ] `run_tests` trả JSON gọn, lỗi tối đa khoảng 800 ký tự.
 - [ ] Nối `@playwright/mcp` cho các thao tác trình duyệt.
@@ -71,24 +71,24 @@
 
 - [x] Cài/cấu hình OpenClaw với provider Ollama local và model khởi đầu `qwen3:4b`; inference local đã chạy được.
 - [x] Cấu hình OpenRouter cho profile `cloud` với endpoint custom `openrouter-cloud`, model `cohere/north-mini-code:free` và alias `cloud`; inference thực tế đã thành công.
-- [ ] Dựng workspace riêng cho Deploy Agent, Test Agent, Triage Agent; Deploy Agent đã tạo tại workspace riêng, còn Test/Triage.
-- [ ] Cấp đúng MCP server cho từng agent; không cấp `deploy` cho Triage.
+- [x] Dựng workspace riêng cho Deploy Agent, Test Agent, Triage Agent.
+- [x] Cấp đúng MCP server cho từng agent; không cấp `deploy` cho Triage.
 - [ ] Không cấp `sessions_send`/`sessions_spawn` nếu vẫn giữ D8.
 - [ ] Viết và kiểm thử riêng playbook Deploy.
 - [ ] Viết và kiểm thử riêng playbook Test theo luồng PLAN → EXPLORE → GENERATE → VALIDATE → HEAL.
-- [ ] Viết và kiểm thử riêng playbook Triage cho `APP_BUG` / `STALE_TEST` / `needs_human`.
+- [x] Viết và kiểm thử riêng playbook Triage cho `APP_BUG` / `STALE_TEST` / `needs_human`.
 - [ ] Mỗi agent phải chạy đúng nhiệm vụ qua chat trước khi ghép vào pipeline.
 
 ### P1 — Orchestrator và pipeline
 
-- [ ] Định nghĩa schema JSON cho task/result và validate mọi đầu vào/đầu ra.
-- [ ] Triển khai `call_agent` sau khi U2 và D6 đã được chốt.
+- [x] Định nghĩa schema JSON cho task/result và validate mọi đầu vào/đầu ra.
+- [x] Triển khai adapter gọi agent OpenClaw sau khi U2 và D6 đã được chốt.
 - [ ] Điều phối chuỗi: CI event → deploy → test → triage → rollback/heal/approval.
 - [ ] Thực hiện nhánh pass: báo cáo và xin duyệt promote production.
 - [ ] Thực hiện nhánh `APP_BUG`: rollback staging, đính kèm bằng chứng, không sửa app.
 - [ ] Thực hiện nhánh `STALE_TEST`: heal test trong allowlist và mở PR.
 - [ ] Giới hạn tối đa 3 vòng heal và giới hạn token/thời gian mỗi lần chạy.
-- [ ] Ghi audit log cho mọi tool call và JSON giữa Orchestrator với agent.
+- [x] Ghi audit log cho run, state transition và event agent/tool trong PostgreSQL.
 
 ### P2 — Bảo mật, đánh giá và demo
 
@@ -109,8 +109,8 @@
 5. [x] Retry `readonly-mcp__get_logs` sau khi quota OpenRouter reset; tool call thành công, trả JSON ngắn.
 6. [x] Tạo cơ chế chuyển profile `cloud` ↔ `local` cho classifier/EvalRunner; đã compile Maven thành công.
 7. [x] Kiểm tra repo `ci-sandbox` thực tế: đã xác nhận Vite/React, Playwright `@playwright/test` `1.64.1`, workflow `.github/workflows/playwright.yml`, UI counter mẫu, Dockerfile và workflow build/push GHCR.
-8. [ ] Chốt D6 rồi chọn cấu trúc thư mục cho MCP/agent/Orchestrator.
-9. [ ] Làm staging + CI/GHCR trước khi ghép đủ 3 agent.
+8. [x] Chốt D6 và chọn cấu trúc thư mục cho MCP/agent/Orchestrator.
+9. [x] Dựng staging + CI/GHCR trước khi ghép đủ 3 agent; phần còn thiếu là gọi webhook và ghép pipeline thật.
 
 ### Trạng thái sau phiên — 2026-11-19
 
@@ -215,12 +215,12 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [x] Đã sửa `ci-sandbox/app/playwright.config.ts`: `reuseExistingServer: true` để Playwright dùng lại staging đang chạy khi môi trường có `CI=1`.
 - [x] Đã xác minh trực tiếp `testgen-mcp.run_tests` trong môi trường CI: test `counter-smoke.spec.ts` pass khoảng 2–3 giây.
 - [x] Đã xác minh Deploy Agent vẫn gọi được `deploy-mcp__health_check` bằng model Particle.
-- [ ] Chưa hoàn tất `testgen-mcp__run_tests` qua Test Agent/OpenClaw. Log cho thấy OpenRouter trả `429` cho `particle-ai/particle-1:free`; các lần timeout `dispatch_action` chưa đủ bằng chứng để kết luận MCP hỏng.
+- [x] Đã thử `testgen-mcp__run_tests` qua Test Agent/OpenClaw. Request mới không trả `429`, nhưng bị kẹt ở `dispatch_action` và timeout; chưa đủ bằng chứng để kết luận MCP hỏng.
 - [ ] Tạm dừng retry Test Agent cloud cho đến khi quota/rate limit reset; không đổi thêm Playwright hoặc Docker trong thời gian chờ.
 - [x] Đã dựng Triage Agent với workspace riêng `~/.openclaw/workspace-triage` và allowlist chỉ gồm `readonly-mcp__get_build_status`, `readonly-mcp__get_logs`.
 - [x] Đã smoke test Triage Agent bằng `readonly-mcp__get_build_status`; bridge ghi nhận 1 tool call và trả đúng trạng thái run `42751785320`.
 - [x] Đã smoke test `readonly-mcp__get_logs` qua Triage Agent; tool trả đúng lỗi `cache-dependency-path: app/package-lock.jsonn`, không dùng `exec` và không lộ tool ngoài allowlist.
-- [x] Đã tạo bản nháp `playbooks/triage.md` với quy trình đọc build/log, verdict `APP_BUG` / `STALE_TEST` / `needs_human`, JSON contract và guardrail readonly; chưa kiểm thử playbook qua agent.
+- [x] Đã tạo và kiểm thử `playbooks/triage.md` với quy trình đọc build/log, verdict `APP_BUG` / `STALE_TEST` / `needs_human`, JSON contract và guardrail readonly.
 - [x] Đã kiểm thử Triage trên run `42751785320`: hai readonly tool gọi thành công, nhưng phát hiện playbook cần siết contract (lỗi config CI phải là `needs_human`, `evidence` phải là array và không được thêm text ngoài JSON).
 - [x] Đã retry kiểm thử phân loại với đầy đủ `repo_full_name`, `run_id`, `run_attempt`: Triage đọc build/log và trả đúng verdict `needs_human`, JSON schema hợp lệ, evidence là array.
 - [x] Đã tạo JSON Schema độc lập ngôn ngữ cho Orchestrator tại `orchestrator/schemas/`: task, result, Triage output và examples; đã kiểm tra parse JSON thành công.
@@ -250,4 +250,3 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [x] Đã chạy lại nhóm test orchestration sau thay đổi môi trường: tổng cộng 10 test pass, không failure/error.
 - [x] Đã rà soát và commit các thay đổi code/test/plan trong commit `ca2f4de`; các file patch/cấu hình cá nhân vẫn để ngoài commit.
 - [x] Đã push commit `ca2f4de` lên remote `origin/main`.
-- [ ] Bước kế tiếp: sau khi quota reset, reload MCP và chạy lại Test Agent cloud với `testgen-mcp__run_tests`; ghi nhận pass/fail và model thực tế.
