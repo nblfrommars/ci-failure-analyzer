@@ -277,6 +277,7 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [x] `open_pr` backend có GitHub App auth, internal token, repo/branch/path allowlist.
 - [x] `.env.local.example`, `.gitignore` secret và `dev.local.ps1` cho Windows.
 - [x] Unit/wiring/guardrail/mock test: 13/13 pass.
+- [x] Telegram approval skeleton: client, approve/reject/timeout state machine, disabled by default, local unit tests (no quota, no live message).
 
 ### Cần quota hoặc môi trường thật để kiểm thử
 
@@ -287,7 +288,7 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 
 ### Còn làm được không cần quota
 
-- [ ] Telegram approval và timeout/reject mặc định.
+- [x] Telegram approval và timeout/reject mặc định đã có skeleton và test local; live test cần bot token/chat ID.
 - [ ] Kết nối `@playwright/mcp` và kiểm thử MCP Inspector.
 - [ ] Prompt-injection test, container non-root, GHCR read-only.
 - [ ] Bổ sung dữ liệu đánh giá, tài liệu, video demo và báo cáo.

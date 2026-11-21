@@ -61,3 +61,8 @@ cfa:
   testgen:
     demo-repo: ${CFA_TESTGEN_DEMO_REPO:${CFA_ORCHESTRATOR_DEMO_REPO:nblfrommars/ci-sandbox}}
     internal-token: ${CFA_TESTGEN_INTERNAL_TOKEN:}
+  telegram:
+    enabled: ${CFA_TELEGRAM_ENABLED:false}
+    bot-token: ${TELEGRAM_BOT_TOKEN:}
+    chat-id: ${TELEGRAM_CHAT_ID:}
+    approval-timeout-minutes: ${TELEGRAM_APPROVAL_TIMEOUT_MINUTES:30}
