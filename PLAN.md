@@ -313,5 +313,6 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [ ] Xác minh một lần `open_pr` thật sau khi quota model cloud hoạt động; lần thử gần nhất bị 429 hoặc sai trạng thái Spring/port, chưa tạo PR.
 - [ ] Ghép pipeline webhook đầy đủ: deploy → test → triage → rollback/heal → approval.
 - [ ] Viết/kiểm thử playbook Deploy và Test đầy đủ; nối `@playwright/mcp` cho bước khám phá UI.
-- [ ] Thêm Telegram approval, bật thử Orchestrator trên webhook demo và chạy đủ 3 nhánh.
+- [x] Thêm Telegram approval skeleton, có approve/reject/timeout và tắt mặc định; chưa nối vào Orchestrator/live Telegram.
+- [ ] Giai đoạn sau: đăng ký bot/chat Telegram theo repo, phân quyền reviewer, polling/webhook và chạy approval thật.
 - [ ] Hoàn thiện profile local/cloud, eval 8–10 ca, prompt-injection test, container non-root và báo cáo/demo.
