@@ -13,15 +13,18 @@ import org.springframework.stereotype.Service;
 public class WorkflowRunOrchestratorTrigger {
 
     private final OrchestratorCoordinator coordinator;
+    private final OrchestratorPipeline pipeline;
     private final String demoRepo;
     private final String llmProfile;
     private final String llmModel;
     public WorkflowRunOrchestratorTrigger(
             OrchestratorCoordinator coordinator,
+            OrchestratorPipeline pipeline,
             @Value("${cfa.orchestrator.demo-repo:nblfrommars/ci-sandbox}") String demoRepo,
             @Value("${cfa.llm.profile:local}") String llmProfile,
             @Value("${cfa.llm.model:qwen3:4b}") String llmModel) {
         this.coordinator = coordinator;
+        this.pipeline = pipeline;
         this.demoRepo = demoRepo;
         this.llmProfile = llmProfile;
         this.llmModel = llmModel;
@@ -46,9 +49,22 @@ public class WorkflowRunOrchestratorTrigger {
 
         OrchestratorContext context = coordinator.start(task, message.repoFullName(),
                 message.runId(), message.runAttempt(), llmProfile, llmModel);
-        context = coordinator.transition(context, OrchestratorEvent.START_DEPLOY,
-                null, "accepted", null);
-        coordinator.executeAgent(context, task, OrchestratorEvent.DEPLOY_SUCCEEDED,
-                OrchestratorEvent.DEPLOY_FAILED);
+        AgentTask testTask = new AgentTask(taskId + "-test", "test", Map.of(
+                "action", "generate_and_validate",
+                "repo_full_name", message.repoFullName(),
+                "staging_url", "http://127.0.0.1:5173",
+                "github_run_id", message.runId(),
+                "run_attempt", message.runAttempt()));
+        AgentTask triageTask = new AgentTask(taskId + "-triage", "triage", Map.of(
+                "repo_full_name", message.repoFullName(),
+                "run_id", message.runId(),
+                "run_attempt", message.runAttempt()));
+        AgentTask rollbackTask = new AgentTask(taskId + "-rollback", "deploy", Map.of(
+                "action", "rollback", "env", "staging", "repo_full_name", message.repoFullName()));
+        AgentTask healTask = new AgentTask(taskId + "-heal", "test", Map.of(
+                "action", "heal", "heal_round", 1, "max_heal_rounds", 3,
+                "repo_full_name", message.repoFullName()));
+
+        pipeline.run(context, task, testTask, triageTask, rollbackTask, healTask);
     }
 }

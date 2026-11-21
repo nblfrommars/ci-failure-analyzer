@@ -58,3 +58,6 @@ cfa:
     openclaw:
       executable: ${OPENCLAW_EXECUTABLE:openclaw.cmd}
       timeout-seconds: ${OPENCLAW_TIMEOUT_SECONDS:300}
+  testgen:
+    demo-repo: ${CFA_TESTGEN_DEMO_REPO:${CFA_ORCHESTRATOR_DEMO_REPO:nblfrommars/ci-sandbox}}
+    internal-token: ${CFA_TESTGEN_INTERNAL_TOKEN:}

@@ -61,7 +61,7 @@
 
 - [x] `readonly-mcp`: đã tạo/probe `get_build_status`, `get_logs`; đang dùng cho Triage Agent.
 - [x] `deploy-mcp`: đã đăng ký/probe thành công với 3 tool; agent Deploy đã kiểm thử `health_check`, `deploy` và `rollback` thành công. Rollback từ image `78b631c65228985bda1d21bc96d457e2110fc7b5` về `eacecc2de832c71e546f94ee2af0050448590427`.
-- [x] `testgen-mcp`: đã tạo, đăng ký và probe thành công 3 tool; `run_tests` cố định Playwright; `open_pr` vẫn dừng an toàn với `needs_human` cho đến khi chốt GitHub auth/branch policy.
+- [x] `testgen-mcp`: đã tạo, đăng ký và probe thành công 3 tool; `run_tests` cố định Playwright; `open_pr` đã nối vào endpoint Spring dùng GitHub App installation token, chỉ cho repo demo/branch `ai/tests-*`/file `app/e2e/tests/ai-generated/*.ts`; chưa gọi GitHub API thật.
 - [ ] Giới hạn `write_test` vào `e2e/tests/ai-generated/*.ts`; resolve path và từ chối path ngoài allowlist.
 - [ ] `run_tests` trả JSON gọn, lỗi tối đa khoảng 800 ký tự.
 - [ ] Nối `@playwright/mcp` cho các thao tác trình duyệt.
@@ -232,6 +232,8 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [x] Đã tạo `OrchestratorCoordinator`: map task → agent, gọi `OpenClawAgentClient`, chuyển state và ghi audit event; unit test adapter/state machine vẫn pass sau thay đổi.
 - [x] Đã nối trigger `workflow_run` thành công vào Orchestrator qua `WorkflowRunOrchestratorTrigger`, giới hạn repo demo và bật bằng `CFA_ORCHESTRATOR_ENABLED=false` mặc định; chưa bật chạy thật trên webhook.
 - [x] Đã thêm `WorkflowRunOrchestratorTriggerTest`: xác minh chỉ run thành công của repo demo với SHA 40 ký tự mới tạo task deploy; repo khác, conclusion khác hoặc SHA sai đều bị bỏ qua.
+- [x] Hoàn thiện route hai nhánh E2E trong `OrchestratorCoordinator`: `APP_BUG` gọi Deploy Agent rollback và dừng ở `NEEDS_HUMAN`; `STALE_TEST` gọi Test Agent heal, ép `max_heal_rounds=3` và quay lại `TESTING`; vượt vòng heal bị từ chối.
+- [x] Test hai nhánh Orchestrator cùng state machine/webhook/guardrail: 10/10 pass.
 - [x] Đã reload MCP và chạy lại Test Agent cloud bằng session mới với model `openrouter-cloud/particle-ai/particle-1:free`; model nhận request và discovery được MCP, nhưng `dispatch_action` bị kẹt khiến tool execution timeout sau khoảng 298 giây, chưa có kết quả test.
 - [ ] Điều tra tiếp lỗi `dispatch_action`/bridge khi Test Agent gọi `testgen-mcp__run_tests`; không retry ngay để tránh lặp request và tiêu quota.
 
@@ -246,7 +248,69 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [ ] Bước tiếp theo: debug `dispatch_action`/MCP bridge, kiểm tra tool call trực tiếp và chỉ retry Test Agent sau khi xác định nguyên nhân.
 - [ ] Sau khi Test Agent chạy ổn định: hoàn thiện luồng `open_pr`, bật thử Orchestrator trên webhook demo và cập nhật số liệu đánh giá.
 - [ ] Chỉ sau khi Test Agent pass ổn định mới chốt `open_pr`, Triage playbook và Orchestrator.
+- [x] Điều tra bước đầu `testgen-mcp__run_tests`: Playwright trực tiếp và hàm `run_tests` chạy pass 1 test trong khoảng 2–5 giây; lỗi không nằm ở test hoặc MCP server.
+- [x] Log OpenClaw ghi nhận gateway event loop bị stall khoảng 29 giây, `worker task timed out`; Test Agent cloud treo trong `dispatch_action`. Cần khôi phục/khởi động gateway khỏe mạnh hoặc chạy isolated dev gateway trước khi retry.
+- [x] Sau khi gateway khỏe lại, log xác nhận nguyên nhân cloud là OpenRouter HTTP `429` với `particle-ai/particle-1:free`; không phải lỗi `testgen-mcp`/Playwright. Tạm dừng retry cloud và cần đổi model còn quota hoặc chuyển Test Agent sang profile local.
+- [x] Đối chứng ngày 2026-11-22: Deploy Agent gọi `deploy-mcp__health_check` thành công và Triage Agent gọi `readonly-mcp__get_build_status` thành công với cùng model cloud; MCP bridge/OpenClaw hoạt động bình thường cho hai agent này.
+- [x] Test Agent cô lập ngày 2026-11-22 đã nhận đúng catalog chỉ gồm `testgen-mcp` và đã gọi `testgen-mcp__run_tests`; lần chạy timeout ở `dispatch_action`/tool execution sau 84,7 giây, không phải `tool_unavailable` và không có mã `429` trong run này. Cần debug riêng vòng đời MCP subprocess hoặc tương tác Playwright khi chạy dưới OpenClaw.
+- [x] Đã xác định và sửa timeout: Playwright subprocess kế thừa stdin của MCP stdio; đổi `npm.cmd` sang gọi trực tiếp `node node_modules/playwright/cli.js` và đặt `stdin=subprocess.DEVNULL`. Sau reload MCP, Test Agent pass cả chạy thư mục và chạy file cụ thể (`1 passed`, khoảng 1,8–2,5 giây); log chẩn đoán chuyển sang opt-in qua `TESTGEN_DEBUG_LOG`.
 - [x] Đã sửa môi trường test context: đặt timezone JVM về UTC và dùng `pgvector/pgvector:pg16` cho Testcontainers; `CiFailureAnalyzerApplicationTests` pass, Flyway áp dụng đủ V1–V3 và Spring context khởi động thành công.
 - [x] Đã chạy lại nhóm test orchestration sau thay đổi môi trường: tổng cộng 10 test pass, không failure/error.
+- [x] Đã xác minh Test Agent qua OpenClaw sau khi cấu hình MCP env: `testgen-mcp__run_tests` chạy đúng file `counter-smoke.spec.ts`, trả `ok=true`, `status=passed`, `1 passed (5.3s)`.
+- [x] Đã triển khai backend mở PR cho Test Agent: tạo branch từ base, ghi một file test AI-generated và mở PR; endpoint yêu cầu token nội bộ, không có merge/production.
+- [x] Java compile và Python syntax check pass sau thay đổi `open_pr`; còn cần cấu hình token, restart Spring/MCP và chạy một lần với GitHub demo để xác minh API thật.
+- [x] Thêm `TestPrControllerTest`: token thiếu và repo/branch/path ngoài allowlist đều bị từ chối; test guardrail chạy pass 2/2.
 - [x] Đã rà soát và commit các thay đổi code/test/plan trong commit `ca2f4de`; các file patch/cấu hình cá nhân vẫn để ngoài commit.
 - [x] Đã push commit `ca2f4de` lên remote `origin/main`.
+- [x] Đã thêm `OrchestratorPipeline` và mock pipeline không dùng LLM: kiểm thử pass, `APP_BUG`, `STALE_TEST`; phát hiện và sửa lỗi coi `status=failed` là thành công; nhóm pipeline mock 13/13 test pass.
+- [x] Đã nối `WorkflowRunOrchestratorTrigger` vào pipeline: webhook success tạo task deploy/test/triage/rollback/heal; nhóm test wiring và mock pipeline pass 13/13.
+- [x] Đã viết playbook Deploy và Test với allowlist tool, JSON contract, quy trình validate/heal, giới hạn 3 vòng và guardrail không deploy/merge/sửa app; `git diff --check` pass.
+
+## Checklist bàn giao và kiểm thử quota — 2026-11-22
+
+### Đã làm, đã kiểm thử không cần quota
+
+- [x] Orchestrator pipeline mock cho pass, `APP_BUG`, `STALE_TEST`.
+- [x] Webhook success đã tạo task deploy/test/triage/rollback/heal.
+- [x] Route rollback/heal, giới hạn 3 vòng và guardrail status agent.
+- [x] Playbook Deploy/Test/Triage và JSON contract.
+- [x] `open_pr` backend có GitHub App auth, internal token, repo/branch/path allowlist.
+- [x] `.env.local.example`, `.gitignore` secret và `dev.local.ps1` cho Windows.
+- [x] Unit/wiring/guardrail/mock test: 13/13 pass.
+
+### Cần quota hoặc môi trường thật để kiểm thử
+
+- [ ] Test Agent cloud chạy lại sau 429 và xác minh `open_pr` tạo PR demo thật.
+- [ ] Chạy Test Agent đầy đủ PLAN → EXPLORE → GENERATE → VALIDATE → HEAL → OPEN_PR.
+- [ ] Chạy Deploy/Test/Triage thật qua webhook demo, không dùng mock.
+- [ ] Đo pass lần đầu, heal, token, thời gian và verdict với model cloud/local.
+
+### Còn làm được không cần quota
+
+- [ ] Telegram approval và timeout/reject mặc định.
+- [ ] Kết nối `@playwright/mcp` và kiểm thử MCP Inspector.
+- [ ] Prompt-injection test, container non-root, GHCR read-only.
+- [ ] Bổ sung dữ liệu đánh giá, tài liệu, video demo và báo cáo.
+- [ ] Sau khi agent thật ổn định, xóa mock không còn cần thiết và chạy lại test thật.
+- [ ] Sau khi quota reset và Test/Deploy/Triage Agent thật chạy ổn định: rà soát, xóa hoặc chuyển các mock pipeline không còn cần thiết, rồi chạy lại bộ test thật và cập nhật số liệu.
+
+## Trạng thái đã xác nhận — 2026-11-22
+
+### Đã hoàn thành
+
+- [x] Deploy Agent gọi được `health_check`, `deploy` và `rollback` qua `deploy-mcp`.
+- [x] Triage Agent gọi được `get_build_status` và `get_logs` qua `readonly-mcp`.
+- [x] Test Agent gọi được `run_tests` qua OpenClaw; test counter pass `1 passed`.
+- [x] `write_test` có allowlist path; `run_tests` trả JSON gọn và có timeout.
+- [x] Orchestrator state machine có nhánh pass, `APP_BUG`, `STALE_TEST` và giới hạn heal 3 vòng.
+- [x] Route `APP_BUG` gọi rollback; route `STALE_TEST` gọi heal; unit test nhóm này pass 10/10.
+- [x] Backend `open_pr` có token nội bộ, repo/branch/path allowlist và không có merge/production.
+- [x] Có `dev.local.ps1` và `.env.local.example`; secret local được loại khỏi Git.
+
+### Còn lại, theo thứ tự ưu tiên
+
+- [ ] Xác minh một lần `open_pr` thật sau khi quota model cloud hoạt động; lần thử gần nhất bị 429 hoặc sai trạng thái Spring/port, chưa tạo PR.
+- [ ] Ghép pipeline webhook đầy đủ: deploy → test → triage → rollback/heal → approval.
+- [ ] Viết/kiểm thử playbook Deploy và Test đầy đủ; nối `@playwright/mcp` cho bước khám phá UI.
+- [ ] Thêm Telegram approval, bật thử Orchestrator trên webhook demo và chạy đủ 3 nhánh.
+- [ ] Hoàn thiện profile local/cloud, eval 8–10 ca, prompt-injection test, container non-root và báo cáo/demo.

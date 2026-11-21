@@ -1,16 +1,21 @@
 package com.nbl.cfa.orchestrator;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.nbl.cfa.webhook.WorkflowRunMessage;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import tools.jackson.databind.json.JsonMapper;
 
 class WorkflowRunOrchestratorTriggerTest {
 
@@ -18,6 +23,11 @@ class WorkflowRunOrchestratorTriggerTest {
     private static final String SHA = "0123456789abcdef0123456789abcdef01234567";
 
     @Mock
+    private OrchestratorPipeline pipeline;
+
+    @Mock
+    private OrchestratorAuditStore auditStore;
+
     private OrchestratorCoordinator coordinator;
 
     private WorkflowRunOrchestratorTrigger trigger;
@@ -25,8 +35,11 @@ class WorkflowRunOrchestratorTriggerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        when(auditStore.createRun(any(), any(), any(), any(), any(), any(), any())).thenReturn(10L);
+        coordinator = new OrchestratorCoordinator(null, new OrchestratorStateMachine(),
+                auditStore, JsonMapper.builder().build());
         trigger = new WorkflowRunOrchestratorTrigger(
-                coordinator, REPO, "cloud", "particle-ai/particle-1:free");
+                coordinator, pipeline, REPO, "cloud", "particle-ai/particle-1:free");
     }
 
     @Test
@@ -34,26 +47,15 @@ class WorkflowRunOrchestratorTriggerTest {
         WorkflowRunMessage message = message(REPO, "success", SHA);
         OrchestratorContext context = new OrchestratorContext(
                 10L, new OrchestratorRun("run-123-1", OrchestratorState.RECEIVED));
-        when(coordinator.start(any(), eq(REPO), eq(123L), eq(1), eq("cloud"),
-                eq("particle-ai/particle-1:free"))).thenReturn(context);
-        when(coordinator.transition(eq(context), eq(OrchestratorEvent.START_DEPLOY),
-                eq(null), eq("accepted"), eq(null))).thenReturn(context);
-
         trigger.handleSuccessfulRun(message);
 
-        verify(coordinator).start(
-                eq(new AgentTask(
-                        "run-123-1",
-                        "deploy",
-                        java.util.Map.of(
-                                "tag", "ghcr.io/nblfrommars/ci-sandbox:sha-" + SHA,
-                                "env", "staging",
-                                "repo_full_name", REPO,
-                                "github_run_id", 123L,
-                                "run_attempt", 1))),
-                eq(REPO), eq(123L), eq(1), eq("cloud"), eq("particle-ai/particle-1:free"));
-        verify(coordinator).executeAgent(eq(context), any(AgentTask.class),
-                eq(OrchestratorEvent.DEPLOY_SUCCEEDED), eq(OrchestratorEvent.DEPLOY_FAILED));
+        ArgumentCaptor<AgentTask> deployTask = ArgumentCaptor.forClass(AgentTask.class);
+        verify(pipeline).run(eq(context), deployTask.capture(), any(AgentTask.class),
+                any(AgentTask.class), any(AgentTask.class), any(AgentTask.class));
+        assertEquals(new AgentTask("run-123-1", "deploy", java.util.Map.of(
+                "tag", "ghcr.io/nblfrommars/ci-sandbox:sha-" + SHA,
+                "env", "staging", "repo_full_name", REPO,
+                "github_run_id", 123L, "run_attempt", 1)), deployTask.getValue());
     }
 
     @Test
@@ -62,7 +64,7 @@ class WorkflowRunOrchestratorTriggerTest {
         trigger.handleSuccessfulRun(message(REPO, "failure", SHA));
         trigger.handleSuccessfulRun(message(REPO, "success", "bad-sha"));
 
-        verify(coordinator, never()).start(any(), any(), any(), any(), any(), any());
+        verify(auditStore, never()).createRun(any(), any(), any(), any(), any(), any(), any());
     }
 
     private WorkflowRunMessage message(String repo, String conclusion, String sha) {

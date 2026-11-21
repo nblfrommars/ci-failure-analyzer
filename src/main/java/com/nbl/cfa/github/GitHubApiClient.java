@@ -6,6 +6,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
@@ -57,6 +59,58 @@ public class GitHubApiClient {
         return response.body();
     }
 
+    public String openTestPullRequest(long installationId, String repoFullName, String baseBranch,
+                                      String branch, String filePath, String content,
+                                      String title, String body) {
+        String baseSha = getRefSha(installationId, repoFullName, baseBranch);
+        createBranch(installationId, repoFullName, branch, baseSha);
+        putFile(installationId, repoFullName, branch, filePath, content,
+                "Add AI-generated Playwright test");
+
+        String url = API + "/repos/" + repoFullName + "/pulls";
+        String requestBody = jsonMapper.writeValueAsString(new PullRequestRequest(title, body, branch, baseBranch));
+        HttpResponse<String> response = send(authorizedPost(url, installationId, requestBody));
+        if (response.statusCode() != 201) {
+            throw new IllegalStateException("Mở GitHub PR thất bại: HTTP "
+                    + response.statusCode() + " " + response.body());
+        }
+        PullRequestResponse pr = jsonMapper.readValue(response.body(), PullRequestResponse.class);
+        return pr.htmlUrl();
+    }
+
+    private String getRefSha(long installationId, String repoFullName, String branch) {
+        String url = API + "/repos/" + repoFullName + "/git/ref/heads/" + branch;
+        HttpResponse<String> response = send(authorized(url, installationId));
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException("Đọc branch gốc thất bại: HTTP "
+                    + response.statusCode() + " " + response.body());
+        }
+        RefResponse ref = jsonMapper.readValue(response.body(), RefResponse.class);
+        return ref.object().sha();
+    }
+
+    private void createBranch(long installationId, String repoFullName, String branch, String sha) {
+        String url = API + "/repos/" + repoFullName + "/git/refs";
+        String requestBody = jsonMapper.writeValueAsString(new RefRequest("refs/heads/" + branch, sha));
+        HttpResponse<String> response = send(authorizedPost(url, installationId, requestBody));
+        if (response.statusCode() != 201) {
+            throw new IllegalStateException("Tạo branch test thất bại: HTTP "
+                    + response.statusCode() + " " + response.body());
+        }
+    }
+
+    private void putFile(long installationId, String repoFullName, String branch,
+                         String filePath, String content, String message) {
+        String url = API + "/repos/" + repoFullName + "/contents/" + filePath;
+        String encoded = Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8));
+        String requestBody = jsonMapper.writeValueAsString(new FileRequest(message, encoded, branch));
+        HttpResponse<String> response = send(authorizedPut(url, installationId, requestBody));
+        if (response.statusCode() != 201 && response.statusCode() != 200) {
+            throw new IllegalStateException("Ghi test lên branch thất bại: HTTP "
+                    + response.statusCode() + " " + response.body());
+        }
+    }
+
     private HttpRequest authorized(String url, long installationId) {
         return HttpRequest.newBuilder(URI.create(url))
                 .header("Authorization", "Bearer " + auth.installationToken(installationId))
@@ -64,6 +118,24 @@ public class GitHubApiClient {
                 .header("X-GitHub-Api-Version", "2022-11-28")
                 .GET()
                 .build();
+    }
+
+    private HttpRequest authorizedPost(String url, long installationId, String body) {
+        return authorizedWithBody(url, installationId, body, false);
+    }
+
+    private HttpRequest authorizedPut(String url, long installationId, String body) {
+        return authorizedWithBody(url, installationId, body, true);
+    }
+
+    private HttpRequest authorizedWithBody(String url, long installationId, String body, boolean put) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
+                .header("Authorization", "Bearer " + auth.installationToken(installationId))
+                .header("Accept", "application/vnd.github+json")
+                .header("Content-Type", "application/json")
+                .header("X-GitHub-Api-Version", "2022-11-28");
+        var publisher = HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8);
+        return (put ? builder.PUT(publisher) : builder.POST(publisher)).build();
     }
 
     private HttpResponse<String> send(HttpRequest request) {
@@ -83,5 +155,24 @@ public class GitHubApiClient {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     private record JobsResponse(List<Job> jobs) {
+    }
+
+    private record RefResponse(RefObject object) {
+    }
+
+    private record RefObject(String sha) {
+    }
+
+    private record RefRequest(String ref, String sha) {
+    }
+
+    private record FileRequest(String message, String content, String branch) {
+    }
+
+    private record PullRequestRequest(String title, String body, String head, String base) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record PullRequestResponse(@com.fasterxml.jackson.annotation.JsonProperty("html_url") String htmlUrl) {
     }
 }
