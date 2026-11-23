@@ -315,4 +315,12 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [ ] Viết/kiểm thử playbook Deploy và Test đầy đủ; nối `@playwright/mcp` cho bước khám phá UI.
 - [x] Thêm Telegram approval skeleton, có approve/reject/timeout và tắt mặc định; chưa nối vào Orchestrator/live Telegram.
 - [ ] Giai đoạn sau: đăng ký bot/chat Telegram theo repo, phân quyền reviewer, polling/webhook và chạy approval thật.
+
+### Phát triển mở rộng sau khi hoàn thành kế hoạch ban đầu
+
+- [ ] Cho phép agent phân tích và sửa một số `APP_BUG` trong branch riêng, chỉ sau khi pipeline ban đầu đã chạy ổn định.
+- [ ] Agent chỉ được sửa repo demo, không sửa secret, workflow CI, Dockerfile hoặc production; mọi thay đổi phải mở PR để người duyệt.
+- [ ] Sau mỗi patch, build image qua CI, deploy lại staging và chạy E2E; giới hạn tối đa 3 vòng sửa.
+- [ ] Nếu vẫn thất bại sau 3 vòng thì rollback, chuyển `needs_human` và giữ đầy đủ diff, log, image SHA trong audit.
+- [ ] Bổ sung MCP allowlist, JSON contract, state machine và unit test riêng cho luồng auto-fix/repair.
 - [ ] Hoàn thiện profile local/cloud, eval 8–10 ca, prompt-injection test, container non-root và báo cáo/demo.
