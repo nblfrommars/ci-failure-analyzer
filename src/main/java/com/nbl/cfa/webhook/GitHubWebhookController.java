@@ -81,7 +81,9 @@ public class GitHubWebhookController {
                 prNumber,
                 run.status(),
                 run.conclusion(),
-                run.htmlUrl());
+                run.htmlUrl(),
+                run.path(),
+                run.event());
 
         rabbitTemplate.convertAndSend(RabbitConfig.WORKFLOW_RUN_QUEUE, jsonMapper.writeValueAsString(message));
         log.info("Đã đưa vào hàng đợi: repo={} run={} attempt={} conclusion={}",

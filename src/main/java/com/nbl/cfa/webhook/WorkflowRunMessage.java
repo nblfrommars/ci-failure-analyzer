@@ -11,5 +11,7 @@ public record WorkflowRunMessage(
         Integer pullRequestNumber,
         String status,
         String conclusion,
-        String htmlUrl) {
+        String htmlUrl,
+        String workflowPath,
+        String workflowEvent) {
 }

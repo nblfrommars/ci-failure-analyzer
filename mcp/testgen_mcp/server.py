@@ -49,10 +49,10 @@ def write_test(relative_path: str, content: str) -> dict[str, Any]:
 
 
 @mcp.tool()
-def run_tests(relative_path: str | None = None, timeout_seconds: int = 300) -> dict[str, Any]:
+def run_tests(relative_path: str = "", timeout_seconds: int = 300) -> dict[str, Any]:
     """Chạy Playwright trong app mục tiêu; không nhận shell command tùy ý."""
     _debug_log(f"START relative_path={relative_path!r} timeout_seconds={timeout_seconds} target_root={TARGET_ROOT}")
-    if relative_path is not None:
+    if relative_path:
         path = _allowed_test_path(relative_path)
         if not path.exists():
             raise ValueError(f"Không tìm thấy test: {relative_path}")

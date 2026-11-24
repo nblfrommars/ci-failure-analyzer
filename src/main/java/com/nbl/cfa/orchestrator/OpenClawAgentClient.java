@@ -2,8 +2,9 @@ package com.nbl.cfa.orchestrator;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -51,42 +52,44 @@ public class OpenClawAgentClient {
             throw new IllegalArgumentException("Không serialize được task cho OpenClaw", e);
         }
 
-        List<String> command = new ArrayList<>(List.of(
-                executable,
-                "agent",
-                "--agent", agentId,
-                "--message", message,
-                "--json",
-                "--timeout", Long.toString(processTimeout.toSeconds())));
-
-        Process process;
+        List<String> command = List.of(executable, "agent", "--agent", agentId,
+                "--message-file", "-", "--json", "--timeout", Long.toString(processTimeout.toSeconds()));
+        Path input = null;
+        Path stdout = null;
+        Path stderr = null;
+        Process process = null;
         try {
+            input = Files.createTempFile("cfa-agent-task-", ".txt");
+            stdout = Files.createTempFile("cfa-agent-stdout-", ".txt");
+            stderr = Files.createTempFile("cfa-agent-stderr-", ".txt");
+            Files.writeString(input, message, StandardCharsets.UTF_8);
             process = new ProcessBuilder(command)
-                    .redirectErrorStream(true)
+                    .redirectInput(input.toFile())
+                    .redirectOutput(stdout.toFile())
+                    .redirectError(stderr.toFile())
                     .start();
-        } catch (IOException e) {
-            throw new IllegalStateException("Không khởi động được OpenClaw CLI: " + executable, e);
-        }
 
-        try {
             boolean completed = process.waitFor(processTimeout.toSeconds(), TimeUnit.SECONDS);
             if (!completed) {
-                process.destroyForcibly();
-                String output = readOutput(process);
-                return new AgentInvocationResult(agentId, true, -1, null, output);
+                terminate(process);
             }
-
-            String output = readOutput(process);
-            return new AgentInvocationResult(
-                    agentId,
-                    false,
-                    process.exitValue(),
-                    parseJsonPayload(output),
-                    output);
+            String output = Files.readString(stdout, StandardCharsets.UTF_8);
+            String diagnostics = Files.readString(stderr, StandardCharsets.UTF_8);
+            String raw = diagnostics.isBlank() ? output : output + "\n" + diagnostics;
+            return new AgentInvocationResult(agentId, !completed, completed ? process.exitValue() : -1,
+                    completed ? parseJsonPayload(output) : null, raw);
+        } catch (IOException e) {
+            throw new IllegalStateException("Không chạy được OpenClaw CLI: " + executable, e);
         } catch (InterruptedException e) {
-            process.destroyForcibly();
+            if (process != null) {
+                terminate(process);
+            }
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Luồng gọi OpenClaw bị interrupt", e);
+        } finally {
+            deleteTempFile(input);
+            deleteTempFile(stdout);
+            deleteTempFile(stderr);
         }
     }
 
@@ -97,17 +100,51 @@ public class OpenClawAgentClient {
             return null;
         }
         try {
-            return jsonMapper.readTree(output.substring(start, end + 1));
+            JsonNode root = jsonMapper.readTree(output.substring(start, end + 1));
+            if (!root.has("result")) {
+                return root;
+            }
+            String status = root.path("status").asText();
+            if (!"ok".equals(status) && !"completed".equals(status)) {
+                return null;
+            }
+            JsonNode payloads = root.path("result").path("payloads");
+            if (!payloads.isArray() || payloads.isEmpty()) {
+                return null;
+            }
+            JsonNode reply = payloads.get(payloads.size() - 1);
+            if (reply.path("isError").asBoolean(false) || !reply.path("text").isTextual()) {
+                return null;
+            }
+            String text = reply.path("text").asText().strip();
+            if (text.startsWith("```json\n") || text.startsWith("```json\r\n")) {
+                if (!text.endsWith("```")) {
+                    return null;
+                }
+                text = text.substring(text.indexOf('\n') + 1, text.length() - 3).strip();
+            }
+            JsonNode payload = jsonMapper.reader()
+                    .with(tools.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                    .readTree(text);
+            return payload.isObject() ? payload : null;
         } catch (Exception e) {
             return null;
         }
     }
 
-    private String readOutput(Process process) {
+    private void terminate(Process process) {
+        process.descendants().forEach(ProcessHandle::destroyForcibly);
+        process.destroyForcibly();
+    }
+
+    private void deleteTempFile(Path path) {
+        if (path == null) {
+            return;
+        }
         try {
-            return new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            Files.deleteIfExists(path);
         } catch (IOException e) {
-            return "Không đọc được output OpenClaw: " + e.getMessage();
+            path.toFile().deleteOnExit();
         }
     }
 

@@ -17,18 +17,18 @@ public class WorkflowRunOrchestratorTrigger {
     private final OrchestratorCoordinator coordinator;
     private final OrchestratorPipeline pipeline;
     private final RepoRegistry repoRegistry;
-    private final String llmProfile;
+    private final String imageWorkflowPath;
     private final String llmModel;
     public WorkflowRunOrchestratorTrigger(
             OrchestratorCoordinator coordinator,
             OrchestratorPipeline pipeline,
             RepoRegistry repoRegistry,
-            @Value("${cfa.llm.profile:local}") String llmProfile,
+            @Value("${cfa.orchestrator.image-workflow-path:.github/workflows/build-image.yml}") String imageWorkflowPath,
             @Value("${cfa.llm.model:qwen3:4b}") String llmModel) {
         this.coordinator = coordinator;
         this.pipeline = pipeline;
         this.repoRegistry = repoRegistry;
-        this.llmProfile = llmProfile;
+        this.imageWorkflowPath = imageWorkflowPath;
         this.llmModel = llmModel;
     }
 
@@ -36,6 +36,9 @@ public class WorkflowRunOrchestratorTrigger {
         RepoConfig repo = repoRegistry.find(message.repoFullName()).orElse(null);
         if (repo == null || !repo.enabled()
                 || !repo.features().deploy() || !repo.features().test() || !repo.features().triage()
+                || !"push".equals(message.workflowEvent())
+                || !imageWorkflowPath.equals(message.workflowPath())
+                || !repo.test().baseBranch().equals(message.headBranch())
                 || !"success".equals(message.conclusion())
                 || message.headSha() == null
                 || !message.headSha().matches("[0-9a-fA-F]{40}")) {

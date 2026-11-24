@@ -20,8 +20,9 @@
 - [x] Đã có `WorkflowRunWorker`, GitHub client/auth, log cleaner/preprocessor và lưu dữ liệu pipeline/failure.
 - [x] Đã có classifier Ollama và các lớp chạy đánh giá (`EvalRunner`, `DbEvalRunner`).
 - [x] Đã có Docker Compose cho PostgreSQL/pgvector và RabbitMQ.
-- [x] Ghi nhận yêu cầu mới trong `AGENTS.md`: chế độ phát triển tạm thời là `cloud` qua OpenRouter; đây là trạng thái/định hướng được khai báo, chưa coi là đã kiểm thử trên máy.
+- [x] Ghi nhận hướng phát triển tạm thời bằng `cloud`: dùng OpenRouter ở các lượt đầu, sau đó chuyển riêng Test Agent demo sang Gemini Free Tier.
 - [x] Kiểm thử cloud inference: OpenRouter đã trả lời thành công với model `cohere/north-mini-code:free` qua OpenClaw TUI.
+- [x] Ngày 2026-11-25: cấu hình riêng Test Agent dùng `google/gemini-3.5-flash-lite` Free Tier và xác minh gọi model, chạy Playwright, mở PR thật. Xem mốc kiểm thử bên dưới.
 - [ ] Còn thiếu playbook Deploy/Test hoàn chỉnh, webhook/pipeline ghép end-to-end, Telegram và demo 3 nhánh; Orchestrator, staging compose, CI build/push và audit log đã có.
 - [x] U2 hoàn tất: gọi agent `main` qua Gateway thành công với provider `openrouter-cloud`, model `cohere/north-mini-code:free`; trả `OK`, thời gian khoảng 9.9 giây, chi phí lượt thử `0`.
 - [x] Kiểm tra local inference: `qwen3:4b` đã trả lời được, nhưng không tuân thủ yêu cầu trả lời chính xác và suy diễn nhầm OpenClaw thành OpenCL; cần đánh giá instruction-following/tool calling trước khi dựng agent.
@@ -61,7 +62,7 @@
 
 - [x] `readonly-mcp`: đã tạo/probe `get_build_status`, `get_logs`; đang dùng cho Triage Agent.
 - [x] `deploy-mcp`: đã đăng ký/probe thành công với 3 tool; agent Deploy đã kiểm thử `health_check`, `deploy` và `rollback` thành công. Rollback từ image `78b631c65228985bda1d21bc96d457e2110fc7b5` về `eacecc2de832c71e546f94ee2af0050448590427`.
-- [x] `testgen-mcp`: đã tạo, đăng ký và probe thành công 3 tool; `run_tests` cố định Playwright; `open_pr` đã nối vào endpoint Spring dùng GitHub App installation token, chỉ cho repo demo/branch `ai/tests-*`/file `app/e2e/tests/ai-generated/*.ts`; chưa gọi GitHub API thật.
+- [x] `testgen-mcp`: đã tạo, đăng ký và probe thành công 3 tool; `run_tests` cố định Playwright. `open_pr` dùng endpoint Spring và GitHub App installation token, đã xác minh mở PR thật trên repo demo với branch `ai/tests-*` và file `app/e2e/tests/ai-generated/*.ts`.
 - [ ] Giới hạn `write_test` vào `e2e/tests/ai-generated/*.ts`; resolve path và từ chối path ngoài allowlist.
 - [ ] `run_tests` trả JSON gọn, lỗi tối đa khoảng 800 ký tự.
 - [ ] Nối `@playwright/mcp` cho các thao tác trình duyệt.
@@ -281,7 +282,7 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 
 ### Cần quota hoặc môi trường thật để kiểm thử
 
-- [ ] Test Agent cloud chạy lại sau 429 và xác minh `open_pr` tạo PR demo thật.
+- [x] Test Agent cloud chạy được bằng Gemini Free Tier và xác minh `open_pr` tạo [PR demo #9](https://github.com/nblfrommars/ci-sandbox/pull/9).
 - [ ] Chạy Test Agent đầy đủ PLAN → EXPLORE → GENERATE → VALIDATE → HEAL → OPEN_PR.
 - [ ] Chạy Deploy/Test/Triage thật qua webhook demo, không dùng mock.
 - [ ] Đo pass lần đầu, heal, token, thời gian và verdict với model cloud/local.
@@ -320,11 +321,34 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 
 ### Còn lại, theo thứ tự ưu tiên
 
-- [ ] Xác minh một lần `open_pr` thật sau khi quota model cloud hoạt động; lần thử gần nhất bị 429 hoặc sai trạng thái Spring/port, chưa tạo PR.
+- [x] Xác minh `open_pr` thật với Gemini trên repo demo; PR #9 đã merge sau khi CI pass.
+- [x] Xác minh GitHub App giao `workflow_run` về CFA và worker lưu cả hai bản ghi sau merge.
 - [ ] Ghép pipeline webhook đầy đủ: deploy → test → triage → rollback/heal → approval.
 - [ ] Viết/kiểm thử playbook Deploy và Test đầy đủ; nối `@playwright/mcp` cho bước khám phá UI.
 - [x] Thêm Telegram approval skeleton, có approve/reject/timeout và tắt mặc định; chưa nối vào Orchestrator/live Telegram.
 - [ ] Giai đoạn sau: đăng ký bot/chat Telegram theo repo, phân quyền reviewer, polling/webhook và chạy approval thật.
+
+### Mốc kiểm thử thật — 2026-11-25
+
+- [x] Gemini 3.5 Flash-Lite Free Tier trả `PONG` qua agent `test`. AI Studio hiển thị 15 request/phút, 250.000 token đầu vào/phút và 500 request/ngày cho project demo.
+- [x] MCP `run_tests` chạy `counter-smoke.spec.ts` thành công trên Chromium: `1 passed (8.9s)`. Agent hoàn tất sau khoảng 29 giây.
+- [x] MCP `open_pr` tạo [PR #9](https://github.com/nblfrommars/ci-sandbox/pull/9) chỉ thêm một file test. [CI của PR](https://github.com/nblfrommars/ci-sandbox/actions/runs/45483005403) pass. PR đã được review và merge vào `main` tại commit `7bfeca3`.
+- [x] Sau merge, [Playwright Tests](https://github.com/nblfrommars/ci-sandbox/actions/runs/45483547182) và [Build and publish image](https://github.com/nblfrommars/ci-sandbox/actions/runs/45483547344) đều pass.
+- [x] Chẩn đoán webhook: Spring health `UP` ở cổng 8080, PostgreSQL chưa có hai run sau merge. GitHub App đã gửi delivery Playwright `45483547182`, nhưng ngrok trả HTTP `404 ERR_NGROK_3200` vì endpoint offline; request chưa tới CFA.
+- [x] Khôi phục tunnel demo và redeliver Playwright `45483547182`: ngrok thấy `POST /webhooks/github` trả HTTP 202 và CFA lưu `completed / success` trong PostgreSQL.
+- [x] Redeliver `workflow_run.completed` của build-image `45483547344`: HTTP 202 và PostgreSQL có `completed / success`. Bảng `orchestrator_run` chưa có bản ghi cho hai lượt sau merge.
+- [x] Giới hạn trigger Orchestrator vào workflow build image thành công từ sự kiện `push` trên nhánh đích đã cấu hình. Playwright vẫn được lưu với vai trò lượt CI. Trigger, pipeline mock và OpenClaw adapter pass 10/10 test.
+- [x] Deploy Agent chuyển sang Gemini 3.5 Flash-Lite, trả `PONG` và gọi thành công `deploy-mcp__health_check`. Tool trả danh sách container rỗng ở lượt kiểm tra này; chưa xác minh deploy image sau merge.
+- [x] Bật Orchestrator và gửi lại build-image `45483547344` lần 1. Audit xác nhận `RECEIVED → DEPLOYING → FAILED` qua `DEPLOY_FAILED`; log OpenClaw của lượt agent ghi Gemini HTTP 503 và staging chưa phục vụ cổng 5173.
+- [x] Build-image `45483547344` attempt 2 xanh và webhook được lưu. Orchestrator dừng ở `DEPLOY_FAILED`; OpenClaw ghi nhận Gemini HTTP 429 (`rate_limit`) trong lượt deploy. Chưa có container staging ở cổng 5173.
+- [x] Gọi Deploy Agent trực tiếp qua OpenClaw/Gemini: `deploy-mcp__deploy` chạy thành công với image `sha-7bfeca36d7a89a3e757c23c609768398fd54111c`. Docker xác nhận `deploy-ci-sandbox-1` healthy và staging cổng 5173 trả HTTP 200. Đây là lượt gọi trực tiếp, chưa đánh dấu pipeline webhook tự động là pass.
+- [x] Sửa adapter Java/OpenClaw: truyền task UTF-8 qua stdin, tách stdout và stderr, đọc JSON của agent bên trong phản hồi Gateway. 11 test liên quan pass. Smoke CLI thật nhận đủ hai dòng và trả `PONG` với Gemini, không gọi tool.
+- [x] Khởi động lại Spring với adapter mới. Build-image `45483547344` attempt 3 xanh, webhook tạo audit mới và Gateway gọi Deploy Agent. Gemini trả HTTP 503, audit ghi `DEPLOY_FAILED`; pipeline chưa tới Test Agent. Container staging khỏe từ lượt deploy trực tiếp trước.
+#### Điểm tiếp tục
+
+- [ ] Ổn định bước Deploy Agent: thử riêng Groq Free hoặc bổ sung backoff có giới hạn cho lỗi Gemini tạm thời (`503`, hoặc `429` ngắn hạn). Kiểm tra tool đã deploy chưa trước mỗi lần thử lại để tránh gọi lặp.
+- [ ] Sau khi provider và MCP ổn định, dùng một build-image attempt mới. Gửi lại delivery cũ dùng cùng `task_id` đã tồn tại. Xác minh audit có `DEPLOY_SUCCEEDED` và Orchestrator thực sự gọi Test Agent.
+- [ ] Hoàn tất kiểm thử end-to-end và kiểm thử lại Triage Agent với provider khả dụng. Test và Deploy đã chạy được khi gọi trực tiếp; hai kết quả này chưa xác nhận pipeline tự động.
 
 ### Phát triển mở rộng sau khi hoàn thành kế hoạch ban đầu
 

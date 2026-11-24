@@ -13,22 +13,24 @@
 | Chủ dự án           | nbl, developer Java Spring Boot / React                                                                                                                                        |
 | Loại dự án          | Đồ án cá nhân, có thầy hướng dẫn                                                                                                                                               |
 | Ngôn ngữ làm việc   | Tiếng Việt. Gọi chủ dự án là "em", AI tự xưng "mình"                                                                                                                           |
-| Cập nhật lần cuối   | 2026-11-25 (thêm registry cấu hình theo repo và xác nhận cho phép chọn `cloud`/`local` theo repo)                                                                                 |
+| Cập nhật lần cuối   | 2026-11-25 (xác minh Test Agent với Gemini, PR demo và CI sau merge; kiểm tra webhook CFA) |
 | Từ khóa bắt buộc    | OpenClaw, Playwright, Model Context Protocol (MCP)                                                                                                                             |
 | Trạng thái          | Nền tảng agent, MCP, OpenClaw, staging và Orchestrator đã có một phần code; registry multi-repo giai đoạn 1 đã hoàn thành, MCP/staging đa repo vẫn đang làm |
-| Chế độ LLM hiện tại | `cloud` (OpenRouter) tạm thời trong giai đoạn phát triển vì máy yếu. Chế độ `local` (Ollama) phải luôn chuyển được bằng cấu hình (mục 4.5, 7). Chưa có xác nhận của thầy (D10) |
+| Chế độ LLM hiện tại | Test Agent demo chạy `cloud` qua Gemini 3.5 Flash-Lite Free Tier. OpenRouter là cấu hình cloud đã dùng trước đó. Giữ lựa chọn `local` (Ollama) bằng cấu hình (mục 4.5, 7). Chưa có xác nhận của thầy (D10). |
 
 Lưu ý: MCP = _Model Context Protocol_, không phải "Multi Context Protocol". Dùng đúng tên trong báo cáo.
+
+**Mốc đã xác minh 2026-11-25:** OpenClaw gọi Test Agent theo ID với `google/gemini-3.5-flash-lite`. Agent gọi `testgen-mcp__run_tests` và Playwright báo `1 passed (8.9s)`, sau đó gọi `open_pr` tạo [PR demo #9](https://github.com/nblfrommars/ci-sandbox/pull/9). PR được review, CI pass và merge vào `main` tại `7bfeca3`. Hai workflow sau merge (Playwright và build/publish image) đều thành công. Đây là các lượt gọi agent trực tiếp, chưa xác minh pipeline Orchestrator từ webhook thật. Sau khi bật lại ngrok và gửi lại hai delivery, cả Playwright `45483547182` và build-image `45483547344` trả HTTP 202. CFA lưu cả hai với `completed / success` vào PostgreSQL. Chưa có audit Orchestrator cho hai lượt này. Xem checklist mới nhất trong `PLAN.md`.
 
 ### 0.2 Tóm tắt
 
 1. Push code / mở PR → CI chạy trên GitHub Actions → webhook → **Orchestrator** (code thường, không LLM) giao việc cho 3 agent chạy trên **OpenClaw**: Deploy, Test, Triage.
 2. **Test Agent** tự sinh test Playwright và tự sửa (heal) khi test lỗi thời. Mọi test AI sinh ra đều qua PR để người duyệt.
 3. Lỗi thật của app: rollback staging và báo người, **không tự sửa code app**. Lên production luôn cần người duyệt (qua Telegram).
-4. LLM có **hai chế độ đổi bằng cấu hình** (mục 4.5): `cloud` (OpenRouter, đang dùng tạm vì máy RTX 3050 4GB VRAM, RAM 16GB quá yếu để chạy model local mượt) và `local` (Ollama, model 4B-8B, dùng khi cần bảo mật hoặc khi thầy yêu cầu). Đổi chế độ không được phải sửa code agent, Orchestrator hay playbook.
+4. LLM có **hai chế độ đổi bằng cấu hình** (mục 4.5): `cloud` (provider theo agent, hiện Test Agent demo dùng Gemini) và `local` (Ollama, model 4B–8B, dùng khi cần bảo mật hoặc theo yêu cầu của thầy). Đổi chế độ không được phải sửa code agent, Orchestrator hay playbook.
 5. Phần nền đã có sẵn trong repo `ci-failure-analyzer` và `ci-sandbox`; cần tận dụng (mục 3).
-6. Rủi ro số 1: **chưa xác minh** cách Orchestrator gọi một agent OpenClaw theo ID (mục 9, U2).
-7. Rủi ro của chế độ `cloud`: dữ liệu gửi ra ngoài (mục 7.5) và giới hạn request của model miễn phí (20 request/phút, 50 request/ngày nếu chưa nạp tiền; **[CHƯA XÁC MINH trên tài khoản thật]**) có thể không đủ cho vài lần chạy end-to-end.
+6. Gọi OpenClaw agent theo ID đã xác minh bằng CLI trên Gateway. Tích hợp Orchestrator với các agent thật qua webhook còn cần kiểm thử end-to-end.
+7. Rủi ro của chế độ `cloud` gồm dữ liệu gửi ra ngoài (mục 7.5) và hạn mức theo provider. Hạn mức quan sát trong AI Studio của project demo Gemini là 15 request/phút, 250.000 token đầu vào/phút và 500 request/ngày cho Gemini 3.5 Flash-Lite.
 
 ### 0.3 Chú giải nhãn
 
@@ -336,6 +338,8 @@ Cách phát biểu an toàn: _"Toàn bộ suy luận AI và dữ liệu mã ngu�
 Model local **không loại bỏ prompt injection** (nội dung trang web Playwright đọc vẫn có thể chứa chỉ dẫn độc). Phân quyền theo MCP server là lớp phòng thủ chính.
 
 ### 7.5 Chế độ cloud: OpenRouter [ĐỀ XUẤT, D9]
+
+Ngày 2026-11-25, Test Agent demo chuyển tạm sang Gemini Free Tier sau khi request OpenRouter trả HTTP 400 cả khi gọi trực tiếp. Phần OpenRouter bên dưới giữ lại để tham chiếu cấu hình và đánh giá các lần chạy trước. Gemini đã qua smoke test, Playwright và mở PR thật. Deploy/Triage chưa được kiểm thử lại trên Gemini.
 
 > Số liệu về OpenRouter lấy từ tài liệu OpenRouter và các bài tổng hợp (tra cứu 2026-11-19). Danh sách model miễn phí đổi nhanh. **[CHƯA XÁC MINH trên tài khoản thật, U11]**: kiểm tra lại trước khi chốt.
 

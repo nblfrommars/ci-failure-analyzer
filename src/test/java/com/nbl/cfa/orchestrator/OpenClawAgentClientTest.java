@@ -41,6 +41,28 @@ class OpenClawAgentClientTest {
     }
 
     @Test
+    void sendsTaskOnStdinAndUsesAgentStatusRatherThanGatewayStatus() throws Exception {
+        Path fakeCli = createScript("""
+                @echo off
+                if not "%4"=="--message-file" exit /b 8
+                if not "%5"=="-" exit /b 9
+                findstr /C:"stdin-check" > nul
+                if errorlevel 1 exit /b 10
+                echo diagnostic {not JSON} 1>&2
+                echo {"status":"ok","result":{"payloads":[{"text":"{\\"status\\":\\"failed\\"}"}]}}
+                """);
+        OpenClawAgentClient client = new OpenClawAgentClient(fakeCli.toString(), 10, jsonMapper);
+
+        AgentInvocationResult result = client.call("deploy",
+                new AgentTask("stdin-check", "deploy", Map.of("env", "staging")));
+
+        assertEquals(0, result.exitCode());
+        assertNotNull(result.payload());
+        assertEquals("failed", result.payload().path("status").asText());
+        assertTrue(result.rawOutput().contains("diagnostic"));
+    }
+
+    @Test
     void rejectsInvalidAgentId() {
         OpenClawAgentClient client =
                 new OpenClawAgentClient("openclaw.cmd", 10, jsonMapper);

@@ -41,7 +41,7 @@ class WorkflowRunOrchestratorTriggerTest {
                 auditStore, JsonMapper.builder().build());
         trigger = new WorkflowRunOrchestratorTrigger(
                 coordinator, pipeline, new RepoRegistry(java.nio.file.Path.of("config/repos.yml")),
-                "cloud", "particle-ai/particle-1:free");
+                ".github/workflows/build-image.yml", "particle-ai/particle-1:free");
     }
 
     @Test
@@ -70,8 +70,25 @@ class WorkflowRunOrchestratorTriggerTest {
     }
 
     private WorkflowRunMessage message(String repo, String conclusion, String sha) {
+        return message(repo, conclusion, sha, "main", ".github/workflows/build-image.yml", "push");
+    }
+
+    @Test
+    void ignoresPlaywrightAndBuildsOutsideTheBaseBranchOrPushEvent() {
+        trigger.handleSuccessfulRun(message(REPO, "success", SHA, "main",
+                ".github/workflows/playwright.yml", "push"));
+        trigger.handleSuccessfulRun(message(REPO, "success", SHA, "feature",
+                ".github/workflows/build-image.yml", "push"));
+        trigger.handleSuccessfulRun(message(REPO, "success", SHA, "main",
+                ".github/workflows/build-image.yml", "pull_request"));
+
+        verify(auditStore, never()).createRun(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    private WorkflowRunMessage message(String repo, String conclusion, String sha, String branch,
+                                       String path, String event) {
         return new WorkflowRunMessage(
-                "delivery-1", 99L, repo, 123L, 1, sha, "main", 7,
-                "completed", conclusion, "https://github.com/" + repo + "/actions/runs/123");
+                "delivery-1", 99L, repo, 123L, 1, sha, branch, 7,
+                "completed", conclusion, "https://github.com/" + repo + "/actions/runs/123", path, event);
     }
 }

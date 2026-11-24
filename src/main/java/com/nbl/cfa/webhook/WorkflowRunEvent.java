@@ -16,6 +16,8 @@ public record WorkflowRunEvent(
             @JsonProperty("head_branch") String headBranch,
             String status,
             String conclusion,
+            String path,
+            String event,
             @JsonProperty("html_url") String htmlUrl,
             @JsonProperty("pull_requests") List<PullRequest> pullRequests) {
     }

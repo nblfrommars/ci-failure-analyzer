@@ -56,6 +56,7 @@ cfa:
 
   orchestrator:
     enabled: ${CFA_ORCHESTRATOR_ENABLED:false}
+    image-workflow-path: ${CFA_ORCHESTRATOR_IMAGE_WORKFLOW_PATH:.github/workflows/build-image.yml}
     demo-repo: ${CFA_ORCHESTRATOR_DEMO_REPO:nblfrommars/ci-sandbox}
     repos:
       file: ${CFA_REPOS_FILE:config/repos.yml}
