@@ -5,6 +5,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.nbl.cfa.github.GitHubApiClient;
+import com.nbl.cfa.repo.RepoRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -25,7 +26,7 @@ class TestPrControllerTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        controller = new TestPrController(github, REPO, "local-token");
+        controller = new TestPrController(github, new RepoRegistry(java.nio.file.Path.of("config/repos.yml")), "local-token");
     }
 
     @Test

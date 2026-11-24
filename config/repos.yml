@@ -1,0 +1,19 @@
+repos:
+  - repo_full_name: nblfrommars/ci-sandbox
+    enabled: true
+    llm_profile: cloud
+    features:
+      triage: true
+      deploy: true
+      test: true
+    deploy:
+      target: local-compose
+      image_repository: ghcr.io/nblfrommars/ci-sandbox
+      staging_dir: deploy/staging
+      staging_port: 5173
+      staging_url: http://127.0.0.1:5173
+    test:
+      checkout_path: ../ci-sandbox
+      app_dir: app
+      ai_tests_dir: e2e/tests/ai-generated
+      base_branch: main

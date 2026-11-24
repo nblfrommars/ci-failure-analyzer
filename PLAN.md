@@ -297,6 +297,16 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 
 ## Trạng thái đã xác nhận — 2026-11-22
 
+### Multi-repo registry — giai đoạn 1
+
+- [x] Đã thêm `config/repos.yml` làm allowlist trung tâm; hiện chỉ bật `nblfrommars/ci-sandbox`.
+- [x] `WorkflowRunOrchestratorTrigger` và `TestPrController` tra cấu hình theo `repo_full_name`, không còn dùng repo/image/URL/path cố định trong logic.
+- [x] Registry validate repo, image GHCR, profile `local|cloud`, path và staging port; registry lỗi thì fail closed.
+- [x] Profile `cloud` được phép cho demo; profile theo repo được ghi vào audit, không tự chuyển profile.
+- [x] Bộ test registry + orchestration + guardrail pass 19/19.
+- [ ] Giai đoạn 2: tham số hóa `deploy-mcp`, `testgen-mcp` và staging compose/state theo từng repo.
+- [ ] Giai đoạn 3: kiểm chứng thêm repo chỉ bằng cấu hình; hiện chưa thêm repo thứ hai vào registry thật.
+
 ### Đã hoàn thành
 
 - [x] Deploy Agent gọi được `health_check`, `deploy` và `rollback` qua `deploy-mcp`.

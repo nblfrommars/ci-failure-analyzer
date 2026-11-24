@@ -39,6 +39,8 @@ github:
   private-key-path: ${GITHUB_APP_PRIVATE_KEY_PATH:}
 
 cfa:
+  repos:
+    file: ${CFA_REPOS_FILE:config/repos.yml}
   llm:
     profile: ${LLM_PROFILE:local}
     base-url: ${LLM_BASE_URL:http://localhost:11434}
@@ -55,6 +57,8 @@ cfa:
   orchestrator:
     enabled: ${CFA_ORCHESTRATOR_ENABLED:false}
     demo-repo: ${CFA_ORCHESTRATOR_DEMO_REPO:nblfrommars/ci-sandbox}
+    repos:
+      file: ${CFA_REPOS_FILE:config/repos.yml}
     openclaw:
       executable: ${OPENCLAW_EXECUTABLE:openclaw.cmd}
       timeout-seconds: ${OPENCLAW_TIMEOUT_SECONDS:300}

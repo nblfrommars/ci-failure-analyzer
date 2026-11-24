@@ -1,6 +1,8 @@
 package com.nbl.cfa.testgen;
 
 import com.nbl.cfa.github.GitHubApiClient;
+import com.nbl.cfa.repo.RepoConfig;
+import com.nbl.cfa.repo.RepoRegistry;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -16,17 +18,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class TestPrController {
 
     private static final Pattern BRANCH = Pattern.compile("ai/tests-[A-Za-z0-9._-]+");
-    private static final String PATH_PREFIX = "app/e2e/tests/ai-generated/";
-
     private final GitHubApiClient github;
-    private final String demoRepo;
+    private final RepoRegistry repoRegistry;
     private final String internalToken;
 
     public TestPrController(GitHubApiClient github,
-                            @Value("${cfa.testgen.demo-repo:nblfrommars/ci-sandbox}") String demoRepo,
+                            RepoRegistry repoRegistry,
                             @Value("${cfa.testgen.internal-token:}") String internalToken) {
         this.github = github;
-        this.demoRepo = demoRepo;
+        this.repoRegistry = repoRegistry;
         this.internalToken = internalToken;
     }
 
@@ -37,12 +37,13 @@ public class TestPrController {
         if (internalToken.isBlank() || token == null || !internalToken.equals(token)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("unauthorized"));
         }
-        if (request == null || !demoRepo.equals(request.repoFullName())
+        RepoConfig repo = request == null ? null : repoRegistry.find(request.repoFullName()).orElse(null);
+        if (request == null || repo == null || !repo.enabled() || !repo.features().test()
                 || request.installationId() == null || !BRANCH.matcher(request.branch()).matches()
                 || request.baseBranch() == null || request.baseBranch().isBlank()) {
             return ResponseEntity.badRequest().body(new ErrorResponse("repo, installation hoặc branch không hợp lệ"));
         }
-        if (!validPath(request.filePath()) || request.content() == null || request.content().isBlank()
+        if (!validPath(repo, request.filePath()) || request.content() == null || request.content().isBlank()
                 || request.content().length() > 200_000) {
             return ResponseEntity.badRequest().body(new ErrorResponse("file test không hợp lệ"));
         }
@@ -57,9 +58,10 @@ public class TestPrController {
         }
     }
 
-    private boolean validPath(String path) {
-        return path != null && path.startsWith(PATH_PREFIX) && path.endsWith(".ts")
-                && !path.contains("..") && path.substring(PATH_PREFIX.length()).indexOf('/') < 0;
+    private boolean validPath(RepoConfig repo, String path) {
+        String prefix = repo.test().appDir() + "/" + repo.test().aiTestsDir() + "/";
+        return path != null && path.startsWith(prefix) && path.endsWith(".ts")
+                && !path.contains("..") && path.substring(prefix.length()).indexOf('/') < 0;
     }
 
     public record OpenPrRequest(String repoFullName, Long installationId, String baseBranch,

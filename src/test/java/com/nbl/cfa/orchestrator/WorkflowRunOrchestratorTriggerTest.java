@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.nbl.cfa.webhook.WorkflowRunMessage;
+import com.nbl.cfa.repo.RepoRegistry;
 import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +40,8 @@ class WorkflowRunOrchestratorTriggerTest {
         coordinator = new OrchestratorCoordinator(null, new OrchestratorStateMachine(),
                 auditStore, JsonMapper.builder().build());
         trigger = new WorkflowRunOrchestratorTrigger(
-                coordinator, pipeline, REPO, "cloud", "particle-ai/particle-1:free");
+                coordinator, pipeline, new RepoRegistry(java.nio.file.Path.of("config/repos.yml")),
+                "cloud", "particle-ai/particle-1:free");
     }
 
     @Test
