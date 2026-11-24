@@ -552,3 +552,11 @@ Không so sánh single/multi. Chỉ đo chính hệ thống:
 - Có thể chọn `llm_profile: cloud` hoặc `local` theo từng repo. `cloud` được phép cho demo khi chủ dự án chấp nhận dữ liệu rời máy; `local` vẫn là lựa chọn cho dữ liệu nhạy cảm và yêu cầu bảo mật.
 - Không được tự động đổi profile. Không đưa secret vào registry.
 - Chưa thêm repo thứ hai thật hoặc repo thứ hai vào registry; khả năng mở rộng sẽ được chứng minh bằng test và tài liệu trước.
+
+### Hướng mở rộng sau khi pipeline ban đầu ổn định
+
+- **Fix Agent cho `APP_BUG`** là tính năng tùy chọn, mặc định tắt. Khi bật theo registry, agent chỉ sửa trong branch `ai/fix-*`, mở PR, chờ CI build image, deploy staging và chạy E2E; Orchestrator được phép lặp tối đa 3 vòng rồi chuyển `needs_human`.
+- Fix Agent phải có allowlist file ghi, denylist secret/workflow/Dockerfile/production config, diff audit và không được tự merge.
+- **Auto-merge Test PR** là tính năng tùy chọn, mặc định tắt. Chỉ xét merge khi PR chỉ thay đổi `ai-generated/**/*.ts`, CI pass đủ số lần cấu hình, không flaky, không có commit mới hoặc conflict và mọi policy check đều pass.
+- Quyền merge chỉ nằm ở Orchestrator/policy service, không cấp trực tiếp cho Test Agent. Mọi auto-merge phải được ghi audit và chỉ bật cho repo đã được chủ dự án cho phép.
+- Hai tính năng này không thay đổi guardrail mặc định: agent hiện vẫn không tự sửa app và không tự merge PR.

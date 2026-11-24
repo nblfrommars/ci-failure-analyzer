@@ -333,6 +333,10 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [ ] Sau mỗi patch, build image qua CI, deploy lại staging và chạy E2E; giới hạn tối đa 3 vòng sửa.
 - [ ] Nếu vẫn thất bại sau 3 vòng thì rollback, chuyển `needs_human` và giữ đầy đủ diff, log, image SHA trong audit.
 - [ ] Bổ sung MCP allowlist, JSON contract, state machine và unit test riêng cho luồng auto-fix/repair.
+- [ ] Thêm policy auto-merge cho PR do Test Agent sinh: mặc định tắt, chỉ bật theo repo trong registry.
+- [ ] Auto-merge chỉ được phép khi PR chỉ đổi `ai-generated/**/*.ts`, CI pass đủ `N` lần liên tiếp, không flaky, không có commit mới/conflict và policy check pass.
+- [ ] Bổ sung quyền GitHub tối thiểu, service kiểm tra diff/checks và audit cho auto-merge; không cấp tool merge trực tiếp cho Test Agent.
+- [ ] Ưu tiên triển khai auto-merge test PR trước Fix Agent vì phạm vi hẹp hơn; sau đó mới làm vòng Fix Agent cho `APP_BUG`.
 - [ ] Hoàn thiện profile local/cloud, eval 8–10 ca, prompt-injection test, container non-root và báo cáo/demo.
 -
 ## Cập nhật tài liệu — 2026-11-25
