@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.yaml.snakeyaml.Yaml;
@@ -20,6 +21,7 @@ public class RepoRegistry {
     private static final Pattern IMAGE = Pattern.compile("ghcr.io/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+") ;
     private final Map<String, RepoConfig> configs;
 
+    @Autowired
     public RepoRegistry(@Value("${cfa.repos.file:config/repos.yml}") String file) {
         this(Path.of(file));
     }
