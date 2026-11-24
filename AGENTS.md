@@ -13,9 +13,9 @@
 | Chủ dự án           | nbl, developer Java Spring Boot / React                                                                                                                                        |
 | Loại dự án          | Đồ án cá nhân, có thầy hướng dẫn                                                                                                                                               |
 | Ngôn ngữ làm việc   | Tiếng Việt. Gọi chủ dự án là "em", AI tự xưng "mình"                                                                                                                           |
-| Cập nhật lần cuối   | 2026-11-19 (thêm chế độ LLM `cloud`/`local`, mục 4.5 và 7.5)                                                                                                                   |
+| Cập nhật lần cuối   | 2026-11-25 (thêm registry cấu hình theo repo và xác nhận cho phép chọn `cloud`/`local` theo repo)                                                                                 |
 | Từ khóa bắt buộc    | OpenClaw, Playwright, Model Context Protocol (MCP)                                                                                                                             |
-| Trạng thái          | Thiết kế đã xong. Phần mới (agent, MCP server, OpenClaw, staging) **chưa có code**. Phần nền (webhook, worker, classifier) **đã có code** trong repo cũ (xem mục 3)            |
+| Trạng thái          | Nền tảng agent, MCP, OpenClaw, staging và Orchestrator đã có một phần code; registry multi-repo giai đoạn 1 đã hoàn thành, MCP/staging đa repo vẫn đang làm |
 | Chế độ LLM hiện tại | `cloud` (OpenRouter) tạm thời trong giai đoạn phát triển vì máy yếu. Chế độ `local` (Ollama) phải luôn chuyển được bằng cấu hình (mục 4.5, 7). Chưa có xác nhận của thầy (D10) |
 
 Lưu ý: MCP = _Model Context Protocol_, không phải "Multi Context Protocol". Dùng đúng tên trong báo cáo.
@@ -49,7 +49,7 @@ Lưu ý: MCP = _Model Context Protocol_, không phải "Multi Context Protocol".
 6. Mọi thay đổi ảnh hưởng guardrail (quyền, đường dẫn ghi, cổng duyệt prod) phải được nêu rõ cho chủ dự án.
 7. Bước tiếp theo hợp lý, tùy chủ dự án chọn: (a) `ci.yml` + `docker-compose` staging cho `ci-sandbox`; (b) thử tool calling của model đang dùng (`qwen3:4b` ở profile `local`, model OpenRouter ở profile `cloud`) với một MCP server đơn giản; (c) kiểm tra cách gọi agent OpenClaw theo ID (U2); (d) dựng hai profile LLM `local`/`cloud` và thử gọi OpenRouter (mục 4.5, U9).
 8. Mọi lời gọi LLM đi qua cấu hình profile ở mục 4.5. Không hardcode base URL, API key, tên model trong code, playbook hay file cấu hình agent. Không viết cấu hình provider của OpenClaw khi chưa xác minh (U1, U10).
-9. Nội dung nhạy cảm (code thật, log thật, secret) chỉ được xử lý ở profile `local`. Profile `cloud` chỉ dùng với dữ liệu demo (mục 4.5, 7.5).
+9. `cloud` và `local` đều được phép chọn bằng cấu hình theo repo. `local` được ưu tiên cho code/log/secret nhạy cảm; `cloud` phù hợp demo hoặc khi chủ dự án chấp nhận dữ liệu gửi ra ngoài. Không tự động đổi profile.
 
 ### 0.5 Nhật ký quyết định
 
@@ -225,7 +225,7 @@ Mục tiêu: đổi giữa OpenRouter và Ollama chỉ bằng đổi một profi
 **Chốt chặn an toàn:**
 
 - Profile đang chạy được ghi vào audit log mỗi lần chạy và hiện trong thông báo Telegram (ví dụ "LLM: cloud / model X").
-- Orchestrator **từ chối chạy profile `cloud` nếu repo đích không nằm trong danh sách dữ liệu demo** (ví dụ chỉ `ci-sandbox`). Repo thật, log thật hoặc có secret thì bắt buộc `local`.
+- Orchestrator không tự đổi profile. Registry quyết định `llm_profile` cho từng repo; `cloud` được phép nếu chủ dự án đã chấp nhận việc gửi dữ liệu ra ngoài, còn repo/log/secret nhạy cảm nên khai báo `local`.
 - Không bao giờ tự động chuyển từ `local` sang `cloud`. Chuyển tự động `cloud` → `local` khi gặp 429/402/timeout là tùy chọn [MỞ] (an toàn hơn về dữ liệu nhưng chậm trên máy yếu).
 - Hợp đồng JSON (mục 5.1), validate schema và retry giữ nguyên ở cả hai profile; đây là lớp bảo đảm khi hai model cư xử khác nhau.
 - Sau mỗi lần đổi profile hoặc đổi model: chạy lại (1) thử tool calling với MCP server đơn giản (U8, U9) và (2) eval Triage trên `labels.json`. Số liệu ở mục 13 luôn ghi kèm profile và model, không trộn số liệu hai profile.
@@ -364,13 +364,13 @@ Model local **không loại bỏ prompt injection** (nội dung trang web Playwr
 
 | Dữ liệu                                                                | Rời máy?               | Xử lý                                                                                                                                             |
 | ---------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Diff PR, accessibility snapshot, log lỗi, kết quả test (đi vào prompt) | Có                     | Chỉ dùng app demo (`ci-sandbox`); lọc secret, token, email, URL nội bộ trước khi gửi (kiểm tra `LogCleaner` có che secret chưa, chưa thì bổ sung) |
+| Diff PR, accessibility snapshot, log lỗi, kết quả test (đi vào prompt) | Có                     | Chỉ gửi khi profile/repo đã được chủ dự án cho phép dùng cloud; lọc secret, token, email, URL nội bộ trước khi gửi |
 | Screenshot                                                             | Chỉ khi model nhận ảnh | Mặc định không đưa ảnh vào prompt; screenshot chỉ đi qua Telegram trong nhánh `APP_BUG`                                                           |
 | API key OpenRouter                                                     | Không                  | Chỉ trong `.env`/secret store, không commit, không đưa vào prompt hay log; đặt giới hạn chi tiêu trên OpenRouter                                  |
 
-**Cách phát biểu an toàn khi đang ở `cloud`:** _"Ở giai đoạn phát triển, suy luận AI chạy qua OpenRouter trên dữ liệu demo không nhạy cảm. Hệ thống có chế độ local (Ollama) đổi được bằng cấu hình, dùng khi cần bảo mật theo yêu cầu của thầy."_ Không nói "toàn bộ xử lý cục bộ" khi profile là `cloud`.
+**Cách phát biểu an toàn khi đang ở `cloud`:** _"Suy luận AI chạy qua OpenRouter theo profile được cấu hình cho repo; dữ liệu có thể rời máy. Hệ thống vẫn có chế độ local (Ollama) để dùng khi cần bảo mật theo yêu cầu của thầy."_ Không nói "toàn bộ xử lý cục bộ" khi profile là `cloud`.
 
-**Bắt buộc chuyển về `local` khi:** xử lý repo thật hoặc log có dữ liệu nhạy cảm; thầy yêu cầu demo hoàn toàn local (D10); hoặc cần đo số liệu cấu hình local cho báo cáo.
+**Nên chuyển về `local` khi:** xử lý repo/log có dữ liệu nhạy cảm; thầy yêu cầu demo hoàn toàn local (D10); hoặc cần đo số liệu cấu hình local cho báo cáo. Đây là quyết định vận hành theo dữ liệu, không phải giới hạn kỹ thuật của registry.
 
 ## 8. Guardrail bắt buộc
 
@@ -381,7 +381,7 @@ Model local **không loại bỏ prompt injection** (nội dung trang web Playwr
 - Giới hạn vòng heal (3) và token mỗi lần chạy.
 - Rút gọn lỗi (~800 ký tự) trước khi trả về agent để tiết kiệm token.
 - Token GHCR trên máy staging chỉ có quyền đọc.
-- Profile LLM đang chạy ghi vào audit log và hiện trong thông báo Telegram. Profile `cloud` chỉ chạy với repo trong danh sách dữ liệu demo (mục 4.5).
+- Profile LLM đang chạy ghi vào audit log và hiện trong thông báo Telegram. Profile được lấy từ registry theo repo và không tự động chuyển.
 - Không bao giờ tự động chuyển từ `local` sang `cloud`.
 - API key LLM chỉ ở `.env`/secret store, không commit, không đưa vào prompt hay log; đặt giới hạn chi tiêu/credit trên OpenRouter.
 - Ở profile `cloud`: lọc secret trước khi gửi nội dung lên ngoài, giới hạn số request mỗi lần chạy (cùng với giới hạn vòng heal và token ở trên), dừng rõ ràng khi gặp 402/429 thay vì thử lại vô hạn.
@@ -542,5 +542,13 @@ Không so sánh single/multi. Chỉ đo chính hệ thống:
 - _Các agent không nói chuyện trực tiếp thì có thật là multi-agent không?_ Đây là multi-agent theo kiểu điều phối tập trung: mỗi agent có vai trò, model, công cụ và quyền riêng, phối hợp qua Orchestrator. Đây là lựa chọn có chủ đích (dễ log, an toàn hơn, hợp model nhỏ); OpenClaw có sẵn cơ chế giao tiếp trực tiếp giữa session nhưng được cố ý không cấp. Hướng mở rộng: cho agent trao đổi trực tiếp (mục 4.3).
 - _Local có thật sự an toàn?_ Xem mục 7.4, trả lời trung thực về GitHub, GHCR, Telegram và prompt injection.
 - _Test AI sinh có đáng tin không?_ Luôn qua PR có người duyệt, chỉ ghi vào thư mục `ai-generated/`, heal bị cấm sửa assertion để che lỗi thật.
-- _Thầy yêu cầu local, sao em lại dùng cloud?_ Cloud chỉ là chế độ tạm trong giai đoạn phát triển, trên dữ liệu demo không nhạy cảm, vì máy 4GB VRAM chạy model local chậm. Kiến trúc giữ endpoint tương thích OpenAI và cấu hình theo profile nên chuyển về local (Ollama) bằng một lệnh, không sửa code; có chốt chặn không cho `cloud` xử lý repo ngoài danh sách demo (mục 4.5). Nói rõ giới hạn: dữ liệu demo vẫn đi qua OpenRouter, và kết quả ở `cloud` không phản ánh chất lượng của model local.
+- _Thầy yêu cầu local, sao em lại dùng cloud?_ Cloud được phép ở giai đoạn phát triển/demo khi chủ dự án chấp nhận dữ liệu rời máy và máy local yếu. Kiến trúc giữ endpoint tương thích OpenAI và cấu hình theo profile nên chuyển về local (Ollama) mà không sửa code; với dữ liệu nhạy cảm nên chọn `local`. Nói rõ giới hạn: dữ liệu gửi qua cloud đi qua OpenRouter, và kết quả ở `cloud` không phản ánh chất lượng của model local.
 - _Chuyển giữa hai chế độ có đảm bảo kết quả như nhau không?_ Không. Model khác nhau cho chất lượng khác nhau. Vì vậy hợp đồng JSON, validate schema và retry giữ nguyên ở cả hai, và sau mỗi lần đổi profile phải chạy lại thử tool calling và eval Triage; số liệu báo cáo luôn ghi kèm profile (mục 13).
+-
+## Cập nhật bắt buộc — 2026-11-25
+
+- CFA đã có registry `config/repos.yml`; hiện registry chỉ bật `nblfrommars/ci-sandbox`.
+- Java đã dùng `repo_full_name` để tra image, staging URL, test path và LLM profile; MCP/staging đa repo chưa hoàn thành.
+- Có thể chọn `llm_profile: cloud` hoặc `local` theo từng repo. `cloud` được phép cho demo khi chủ dự án chấp nhận dữ liệu rời máy; `local` vẫn là lựa chọn cho dữ liệu nhạy cảm và yêu cầu bảo mật.
+- Không được tự động đổi profile. Không đưa secret vào registry.
+- Chưa thêm repo thứ hai thật hoặc repo thứ hai vào registry; khả năng mở rộng sẽ được chứng minh bằng test và tài liệu trước.

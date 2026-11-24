@@ -1,12 +1,12 @@
 # Kế hoạch hoàn thiện CI Failure Analyzer
 
-> Cập nhật: 2026-11-21
+> Cập nhật: 2026-11-25
 > Nguồn yêu cầu: `AGENTS.md` và đối chiếu code hiện tại của repo này.
 
 ## 1. Mục tiêu cuối cùng
 
 - [ ] Có demo multi-agent CI/CD chạy được với 3 agent: Deploy, Test, Triage.
-- [ ] Có hai profile LLM `cloud`/`local`; tạm phát triển bằng OpenRouter, vẫn giữ Ollama local để chuyển lại khi cần và dùng cho demo/bảo mật.
+- [x] Có hai profile LLM `cloud`/`local`; profile được chọn theo cấu hình repo. `cloud` được phép cho demo khi chủ dự án chấp nhận dữ liệu rời máy; `local` vẫn sẵn sàng cho dữ liệu nhạy cảm/bảo mật.
 - [ ] Orchestrator điều phối bằng code/state machine, không để các agent gọi trực tiếp nhau.
 - [ ] Có đủ 3 nhánh demo: pass, `APP_BUG`, `STALE_TEST`.
 - [ ] Production luôn cần người duyệt; Test Agent chỉ ghi vào vùng `ai-generated/` và mở PR.
@@ -208,7 +208,7 @@ openrouter/<model-id>
 
 Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwright, Orchestrator, schema JSON và guardrail. Chỉ thay profile/provider/model, credential và chạy lại bộ kiểm thử tool calling/evaluation.
 
-> Lưu ý bảo mật: profile `cloud` chỉ được dùng với `ci-sandbox` và dữ liệu demo đã lọc. Repo thật, log thật hoặc secret bắt buộc dùng profile `local`; không tự động chuyển `local` sang `cloud`.
+> Lưu ý bảo mật: profile `cloud` được chọn theo registry khi chủ dự án chấp nhận dữ liệu rời máy. Với repo/log/secret nhạy cảm nên dùng `local`; không tự động chuyển `local` sang `cloud`.
 
 ## Cập nhật trạng thái — 2026-11-21
 
@@ -334,3 +334,11 @@ Khi chuyển đổi, các thành phần vẫn giữ nguyên: MCP server, Playwri
 - [ ] Nếu vẫn thất bại sau 3 vòng thì rollback, chuyển `needs_human` và giữ đầy đủ diff, log, image SHA trong audit.
 - [ ] Bổ sung MCP allowlist, JSON contract, state machine và unit test riêng cho luồng auto-fix/repair.
 - [ ] Hoàn thiện profile local/cloud, eval 8–10 ca, prompt-injection test, container non-root và báo cáo/demo.
+-
+## Cập nhật tài liệu — 2026-11-25
+
+- [x] Giai đoạn 1 multi-repo registry đã hoàn thành và push trong commit `a9bba0e`.
+- [x] `config/repos.yml` hiện chỉ bật `nblfrommars/ci-sandbox`; chưa cần repo thứ hai.
+- [x] `cloud` được phép chọn theo repo để phục vụ demo trên máy yếu; `local` vẫn được giữ để chuyển khi cần bảo mật.
+- [ ] Giai đoạn 2 còn lại: tham số hóa `deploy-mcp`, `testgen-mcp`, compose/state và kiểm thử path/image riêng theo repo.
+- [ ] Không đánh dấu hoàn thành khả năng bật feature riêng lẻ cho đến khi state machine/pipeline hỗ trợ đầy đủ.
